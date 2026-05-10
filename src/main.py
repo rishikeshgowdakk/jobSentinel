@@ -9,6 +9,7 @@ from src.intelligence.gemini import GeminiAnalyzer
 from src.generator.resume import ResumeGenerator
 from src.notify.email_client import EmailClient
 from src.notify.calendar import CalendarClient
+from src.notify.github import GithubClient
 
 async def main():
     logger.info("Starting Sentinel-Apply...")
@@ -17,6 +18,7 @@ async def main():
     analyzer = GeminiAnalyzer()
     generator = ResumeGenerator()
     email_client = EmailClient()
+    github_client = GithubClient()
     
     # Optional: Calendar client requires manual auth first time
     calendar_client = None
@@ -68,6 +70,9 @@ async def main():
                         job['ats_score'] = analysis['ats_score']
                         job['status'] = 'tailored'
                         db.add_job(job)
+                        
+                        # Push results to GitHub
+                        github_client.push_changes(job['title'], job['company'])
                     else:
                         logger.error("Failed to generate tailored resume.")
                 else:
