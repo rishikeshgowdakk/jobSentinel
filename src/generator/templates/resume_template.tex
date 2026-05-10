@@ -1,0 +1,35 @@
+\documentclass[a4paper,11pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[margin=1in]{geometry}
+\usepackage{enumitem}
+\usepackage{titlesec}
+
+\titleformat{\section}{\large\bfseries}{}{0em}{}[\titlerule]
+\titlespacing{\section}{0pt}{10pt}{5pt}
+
+\begin{document}
+
+\begin{center}
+    {\huge \bfseries YOUR NAME} \\
+    Email: your.email@example.com | Phone: (123) 456-7890 \\
+    LinkedIn: linkedin.com/in/yourprofile | GitHub: github.com/yourusername
+\end{center}
+
+\section{Professional Summary}
+{{ tailored_summary }}
+
+\section{Skills}
+\textbf{Technical Skills:} {{ top_skills | join(', ') }}
+
+\section{Work Experience}
+{% for exp in tailored_experience %}
+\textbf{ {{ exp.role }} } \hfill {{ exp.company }} \\
+\begin{itemize}[noitemsep,topsep=0pt]
+    {% for bullet in exp.bullets %}
+    \item {{ bullet }}
+    {% endfor %}
+\end{itemize}
+\vspace{5pt}
+{% endfor %}
+
+\end{document}
