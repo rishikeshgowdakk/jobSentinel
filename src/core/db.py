@@ -100,4 +100,28 @@ class Database:
             if self.conn:
                 self.conn.rollback()
 
+    def get_recent_jobs(self, limit=50):
+        query = f"SELECT job_id, title, company, url, ats_score, processed_at, status FROM processed_jobs ORDER BY processed_at DESC LIMIT {limit}"
+        try:
+            cur = self.conn.cursor()
+            cur.execute(query)
+            rows = cur.fetchall()
+            cur.close()
+            
+            jobs = []
+            for row in rows:
+                jobs.append({
+                    "job_id": row[0],
+                    "title": row[1],
+                    "company": row[2],
+                    "url": row[3],
+                    "ats_score": row[4],
+                    "processed_at": row[5],
+                    "status": row[6]
+                })
+            return jobs
+        except Exception as e:
+            logger.error(f"Error fetching recent jobs: {e}")
+            return []
+
 db = Database()

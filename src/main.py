@@ -11,8 +11,8 @@ from src.notify.email_client import EmailClient
 from src.notify.calendar import CalendarClient
 from src.notify.github import GithubClient
 
-async def main():
-    logger.info("Starting Sentinel-Apply...")
+async def run_scanner():
+    logger.info("Starting Sentinel-Apply Background Scanner...")
     
     scraper = JobScraper()
     analyzer = GeminiAnalyzer()
@@ -27,17 +27,17 @@ async def main():
     except Exception as e:
         logger.warning(f"Calendar initialization failed (likely missing credentials): {e}")
 
-    # Load master resume
-    if not os.path.exists(config.MASTER_RESUME_PATH):
-        logger.error(f"Master resume not found at {config.MASTER_RESUME_PATH}. Creating a dummy one.")
-        with open(config.MASTER_RESUME_PATH, 'w') as f:
-            f.write("# Master Resume\nExperience at Tech Corp...")
-
-    with open(config.MASTER_RESUME_PATH, 'r') as f:
-        master_resume = f.read()
-
     while True:
         try:
+            # Re-read master resume every loop in case it was updated via API
+            if not os.path.exists(config.MASTER_RESUME_PATH):
+                logger.error(f"Master resume not found at {config.MASTER_RESUME_PATH}. Creating a dummy one.")
+                with open(config.MASTER_RESUME_PATH, 'w') as f:
+                    f.write("# Master Resume\nExperience at Tech Corp...")
+
+            with open(config.MASTER_RESUME_PATH, 'r') as f:
+                master_resume = f.read()
+
             logger.info("Scanning for new jobs...")
             new_jobs = await scraper.scrape_linkedin()
             
@@ -90,4 +90,4 @@ async def main():
             await asyncio.sleep(60) # Sleep before retrying
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    asyncio.run(run_scanner())
