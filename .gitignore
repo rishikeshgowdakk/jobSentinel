@@ -17,9 +17,7 @@ node_modules/
 dist/
 build/
 .DS_Store
-*.tex
 *.aux
-*.log
 *.out
 *.pdf
 temp_resume.pdf
