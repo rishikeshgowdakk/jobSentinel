@@ -1,7 +1,7 @@
 import asyncio
 import random
 from playwright.async_api import async_playwright
-from playwright_stealth import stealth_async
+from playwright_stealth import stealth
 from src.core.config import config
 from src.core.logger import logger
 
@@ -16,7 +16,7 @@ class JobScraper:
             user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36"
         )
         page = await context.new_page()
-        await stealth_async(page)
+        await stealth(page)
         return browser, page
 
     async def scrape_linkedin(self):
@@ -50,7 +50,7 @@ class JobScraper:
                                     # Fetch JD
                                     jd_page_context = await browser.new_context()
                                     jd_p = await jd_page_context.new_page()
-                                    await stealth_async(jd_p)
+                                    await stealth(jd_p)
                                     await jd_p.goto(link, wait_until='networkidle')
                                     jd_elem = await jd_p.query_selector(".description__text")
                                     jd_text = await jd_elem.inner_text() if jd_elem else ""
