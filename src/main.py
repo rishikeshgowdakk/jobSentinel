@@ -38,15 +38,28 @@ async def run_scanner():
             with open(config.MASTER_RESUME_PATH, 'r') as f:
                 master_resume = f.read()
 
+            logger.info("Extracting search parameters from master resume...")
+            resume_params = analyzer.extract_resume_parameters(master_resume)
+            logger.info(f"Targeting: {resume_params.get('location')} | YOE: {resume_params.get('yoe')} | Tech: {resume_params.get('tech_stack')}")
+
             logger.info("Scanning for new jobs...")
-            new_jobs = await scraper.scrape_linkedin()
+            # Use top tech stack skill as keyword and extracted location
+            keywords = resume_params.get('tech_stack', ['Software Engineer'])[:2]
+            locations = [resume_params.get('location', 'Remote')]
+            
+            new_jobs = await scraper.scrape_linkedin(keywords=keywords, locations=locations)
             
             for job in new_jobs:
                 if db.job_exists(job['job_id']):
                     continue
                 
                 logger.info(f"Analyzing new job: {job['title']} at {job['company']}")
-                analysis = analyzer.analyze_job(master_resume, job['description'])
+                analysis = analyzer.analyze_job(
+                    master_resume, 
+                    job['description'],
+                    user_yoe=resume_params.get('yoe', 0),
+                    user_tech_stack=resume_params.get('tech_stack', [])
+                )
                 
                 if analysis and analysis.get('ats_score', 0) >= 80:
                     logger.info(f"High match found! ATS Score: {analysis['ats_score']}")

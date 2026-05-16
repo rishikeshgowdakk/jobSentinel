@@ -8,10 +8,15 @@ class GeminiAnalyzer:
         genai.configure(api_key=config.GEMINI_API_KEY)
         self.model = genai.GenerativeModel('gemini-1.5-flash')
 
-    def analyze_job(self, master_resume: str, job_description: str):
+    def analyze_job(self, master_resume: str, job_description: str, user_yoe: int = 0, user_tech_stack: list = None):
+        tech_stack_str = ", ".join(user_tech_stack) if user_tech_stack else "Not specified"
         prompt = f"""
-        You are an expert ATS (Applicant Tracking System) optimizer. 
+        You are an expert ATS (Applicant Tracking System) optimizer and career coach. 
         Compare the following Master Resume with the Job Description.
+        
+        Candidate Profile:
+        - Years of Experience: {user_yoe}
+        - Primary Tech Stack: {tech_stack_str}
         
         Master Resume:
         {master_resume}
@@ -19,7 +24,12 @@ class GeminiAnalyzer:
         Job Description:
         {job_description}
         
-        Output a JSON object with the following structure:
+        STRICT MATCHING RULES:
+        1. If the Job Description explicitly requires significantly more years of experience (e.g., JD asks for 8 years, candidate has 2), the 'ats_score' MUST be 0.
+        2. If the Job Description mandates a core technology that is completely missing from the candidate's Tech Stack or Resume, the 'ats_score' MUST be 0.
+        3. If it's a good match, provide a high 'ats_score' and tailored content.
+        
+        Output a JSON object:
         {{
             "ats_score": (int 0-100),
             "tailored_summary": "A professional summary tailored to this JD",
@@ -32,8 +42,6 @@ class GeminiAnalyzer:
             ],
             "top_skills": ["skill1", "skill2", "skill3"]
         }}
-        
-        Maintain truthfulness while emphasizing relevant keywords from the JD.
         """
         
         try:
