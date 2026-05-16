@@ -19,12 +19,15 @@ class JobScraper:
         await stealth_async(page)
         return browser, page
 
-    async def scrape_linkedin(self):
+    async def scrape_linkedin(self, keywords=None, locations=None):
         jobs = []
+        search_keywords = keywords if keywords else self.keywords
+        search_locations = locations if locations else self.locations
+        
         async with async_playwright() as p:
             browser, page = await self._get_browser(p)
-            for keyword in self.keywords:
-                for location in self.locations:
+            for keyword in search_keywords:
+                for location in search_locations:
                     # f_TPR=r86400 is "Past 24 hours", sortBy=DD is "Most Recent"
                     url = f"https://www.linkedin.com/jobs/search/?keywords={keyword}&location={location}&f_TPR=r86400&sortBy=DD"
                     logger.info(f"Scraping LinkedIn: {url}")

@@ -49,3 +49,34 @@ class GeminiAnalyzer:
         except Exception as e:
             logger.error(f"Error in Gemini analysis: {e}")
             return None
+
+    def extract_resume_parameters(self, resume_text: str):
+        prompt = f"""
+        Analyze the following resume and extract key search parameters for a job search.
+        
+        Resume:
+        {resume_text}
+        
+        Output a JSON object with the following structure:
+        {{
+            "location": "The user's current or target city/region (e.g., 'San Francisco', 'Remote', 'London')",
+            "yoe": (int) Total years of professional experience,
+            "tech_stack": ["Primary Technology 1", "Primary Technology 2", ...]
+        }}
+        """
+        try:
+            response = self.model.generate_content(prompt)
+            text = response.text
+            if "```json" in text:
+                text = text.split("```json")[1].split("```")[0]
+            elif "```" in text:
+                text = text.split("```")[1].split("```")[0]
+            
+            return json.loads(text.strip())
+        except Exception as e:
+            logger.error(f"Error extracting resume parameters: {e}")
+            return {
+                "location": "Remote",
+                "yoe": 0,
+                "tech_stack": ["Software Engineer"]
+            }
