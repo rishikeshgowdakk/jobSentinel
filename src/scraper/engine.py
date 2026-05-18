@@ -28,9 +28,17 @@ class JobScraper:
             browser, page = await self._get_browser(p)
             for keyword in search_keywords:
                 for location in search_locations:
+                    # LinkedIn Params: f_JT (F=Full, P=Part, I=Internship), f_E (1=Intern, 2=Entry, 4=Mid)
                     url = f"https://www.linkedin.com/jobs/search/?keywords={keyword}&location={location}&f_TPR=r86400&sortBy=DD"
-                    if job_type in ["F", "P"]: url += f"&f_JT={job_type}"
-                    if experience_level in ["1", "2", "3", "4", "5", "6"]: url += f"&f_E={experience_level}"
+                    
+                    if job_type in ["F", "P", "I"]: 
+                        url += f"&f_JT={job_type}"
+                    
+                    # If user chose Fresher (2), we also search for Internship (1) on LinkedIn
+                    if experience_level == "2":
+                        url += "&f_E=1,2"
+                    elif experience_level == "4":
+                        url += "&f_E=4"
                         
                     logger.info(f"LinkedIn [{keyword} | {location}]: Searching...")
                     try:
@@ -86,9 +94,13 @@ class JobScraper:
             for keyword in search_keywords:
                 for location in search_locations:
                     query = f"{keyword} jobs in {location}"
+                    
                     if job_type == "F": query += " full-time"
                     elif job_type == "P": query += " part-time"
-                    if experience_level == "2": query += " entry level"
+                    elif job_type == "I": query += " internship"
+                    
+                    if experience_level == "2": query += " entry level fresher"
+                    elif experience_level == "4": query += " experienced mid-senior"
                     
                     url = f"https://www.google.com/search?q={query.replace(' ', '+')}&ibp=htl;jobs"
                     logger.info(f"Google Jobs [{keyword} | {location}]: Searching...")
@@ -110,7 +122,7 @@ class JobScraper:
                                 await card.click()
                                 await asyncio.sleep(1)
                                 
-                                jd_elem = await page.query_selector(".YbeU7") # Common class for Google JD
+                                jd_elem = await page.query_selector(".YbeU7") 
                                 jd_text = await jd_elem.inner_text() if jd_elem else ""
                                 
                                 job_id = "gj_" + str(hash(title + company))[-8:]
@@ -119,7 +131,7 @@ class JobScraper:
                                     "job_id": job_id,
                                     "title": title.strip(),
                                     "company": company.strip(),
-                                    "url": url, # Google Jobs doesn't always have a direct link easily clickable
+                                    "url": url, 
                                     "description": jd_text.strip(),
                                     "source": "Google Jobs"
                                 })

@@ -8,8 +8,16 @@ class GeminiAnalyzer:
         self.client = genai.Client(api_key=config.GEMINI_API_KEY)
         self.model_name = 'gemini-1.5-flash'
 
-    def analyze_job(self, master_resume: str, job_description: str, user_yoe: int = 0, user_tech_stack: list = None):
+    def analyze_job(self, master_resume: str, job_description: str, user_yoe: int = 0, user_tech_stack: list = None, target_seniority: str = "All", target_job_type: str = "All"):
         tech_stack_str = ", ".join(user_tech_stack) if user_tech_stack else "Not specified"
+        
+        # Human-readable seniority/job type for the prompt
+        seniority_map = {"2": "Fresher/Entry Level", "4": "Mid-Senior Level"}
+        job_type_map = {"F": "Full-time", "P": "Part-time", "I": "Internship"}
+        
+        target_seniority_str = seniority_map.get(target_seniority, "Any")
+        target_job_type_str = job_type_map.get(target_job_type, "Any")
+
         prompt = f"""
         You are an expert ATS (Applicant Tracking System) optimizer and career coach. 
         Compare the following Master Resume with the Job Description.
@@ -18,6 +26,10 @@ class GeminiAnalyzer:
         - Years of Experience: {user_yoe}
         - Primary Tech Stack: {tech_stack_str}
         
+        User Search Preferences:
+        - Target Seniority: {target_seniority_str}
+        - Target Job Type: {target_job_type_str}
+        
         Master Resume:
         {master_resume}
         
@@ -25,13 +37,16 @@ class GeminiAnalyzer:
         {job_description}
         
         STRICT MATCHING RULES:
-        1. If the Job Description explicitly requires significantly more years of experience (e.g., JD asks for 8 years, candidate has 2), the 'ats_score' MUST be 0.
-        2. If the Job Description mandates a core technology that is completely missing from the candidate's Tech Stack or Resume, the 'ats_score' MUST be 0.
-        3. If it's a good match, provide a high 'ats_score' and tailored content.
+        1. SENIORITY MATCH: If Target Seniority is 'Fresher/Entry Level' and the JD requires more than 2 years of experience, set 'ats_score' to 0. 
+        2. JOB TYPE MATCH: If Target Job Type is 'Internship' and the JD is for a permanent/senior role, set 'ats_score' to 0.
+        3. EXPERIENCE MATCH: If the Job Description explicitly requires significantly more years of experience than the candidate has, the 'ats_score' MUST be 0.
+        4. TECH MATCH: If the Job Description mandates a core technology that is completely missing from the candidate's Resume, the 'ats_score' MUST be 0.
+        5. If it's a good match, provide a high 'ats_score' and tailored content.
         
         Output a JSON object:
         {{
             "ats_score": (int 0-100),
+            "rejection_reason": "Brief reason if score is 0, otherwise null",
             "tailored_summary": "A professional summary tailored to this JD",
             "tailored_experience": [
                 {{

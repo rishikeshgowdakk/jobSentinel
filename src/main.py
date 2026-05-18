@@ -68,10 +68,13 @@ async def run_scanner(broadcast_callback=None):
                     master_resume, 
                     job['description'],
                     user_yoe=resume_params.get('yoe', 0),
-                    user_tech_stack=resume_params.get('tech_stack', [])
+                    user_tech_stack=resume_params.get('tech_stack', []),
+                    target_seniority=exp_level,
+                    target_job_type=job_type
                 )
                 
                 job['ats_score'] = analysis.get('ats_score', 0) if analysis else 0
+                job['rejection_reason'] = analysis.get('rejection_reason') if analysis else None
                 job['status'] = 'tailored' if job['ats_score'] >= 80 else 'ignored'
                 
                 if job['status'] == 'tailored':
