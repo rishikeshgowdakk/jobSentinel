@@ -46,6 +46,8 @@ async def run_scanner():
             # Use user-defined preferences if set, otherwise fallback to extracted resume params
             db_keywords = db.get_setting("keywords")
             db_locations = db.get_setting("locations")
+            job_type = db.get_setting("job_type", "All")
+            experience_level = db.get_setting("experience_level", "All")
             
             if db_keywords:
                 keywords = [k.strip() for k in db_keywords.split(",")]
@@ -57,9 +59,14 @@ async def run_scanner():
             else:
                 locations = [resume_params.get('location', 'Remote')]
             
-            logger.info(f"Using search parameters: Keywords: {keywords} | Locations: {locations}")
+            logger.info(f"Using search parameters: Keywords: {keywords} | Locations: {locations} | Job Type: {job_type} | Exp: {experience_level}")
             
-            new_jobs = await scraper.scrape_linkedin(keywords=keywords, locations=locations)
+            new_jobs = await scraper.scrape_linkedin(
+                keywords=keywords, 
+                locations=locations,
+                job_type=job_type,
+                experience_level=experience_level
+            )
             
             for job in new_jobs:
                 if db.job_exists(job['job_id']):
