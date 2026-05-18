@@ -1,12 +1,14 @@
 import os
 import asyncio
 import fitz  # PyMuPDF
-from fastapi import FastAPI, UploadFile, File, BackgroundTasks
+import json
+from fastapi import FastAPI, UploadFile, File, BackgroundTasks, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+from typing import List
 from src.core.db import db
 from src.core.config import config
-from src.core.logger import logger
+from src.core.logger import logger, log_queue
 from src.main import run_scanner
 
 app = FastAPI(title="JobSentinel API")
@@ -16,6 +18,33 @@ class Preferences(BaseModel):
     locations: str
     job_type: str = "All"
     experience_level: str = "All"
+
+# Connection Manager for WebSockets
+class ConnectionManager:
+    def __init__(self):
+        self.active_connections: List[WebSocket] = []
+
+    async def connect(self, websocket: WebSocket):
+        await websocket.accept()
+        self.active_connections.append(websocket)
+
+    def disconnect(self, websocket: WebSocket):
+        self.active_connections.remove(websocket)
+
+    async def broadcast(self, message: dict):
+        for connection in self.active_connections:
+            try:
+                await connection.send_json(message)
+            except Exception:
+                continue
+
+manager = ConnectionManager()
+
+# Background task to stream log_queue to WebSockets
+async def log_broadcaster():
+    while True:
+        log_entry = await log_queue.get()
+        await manager.broadcast(log_entry)
 
 # Enable CORS
 app.add_middleware(
@@ -28,8 +57,20 @@ app.add_middleware(
 
 @app.on_event("startup")
 async def startup_event():
-    # Start the scanner in the background
-    asyncio.create_task(run_scanner())
+    # Start the scanner
+    asyncio.create_task(run_scanner(broadcast_callback=manager.broadcast))
+    # Start the log broadcaster
+    asyncio.create_task(log_broadcaster())
+
+@app.websocket("/api/ws/stream")
+async def websocket_endpoint(websocket: WebSocket):
+    await manager.connect(websocket)
+    try:
+        while True:
+            # Wait for any messages from client (not strictly needed but keeps connection alive)
+            await websocket.receive_text()
+    except WebSocketDisconnect:
+        manager.disconnect(websocket)
 
 @app.get("/api/jobs")
 async def get_jobs():
@@ -55,7 +96,6 @@ async def update_preferences(prefs: Preferences):
 @app.post("/api/resume/upload")
 async def upload_resume(file: UploadFile = File(...)):
     try:
-        # Validate extension
         if not file.filename.lower().endswith('.pdf'):
             return {"status": "error", "message": "Only PDF files are supported"}
 
@@ -63,47 +103,28 @@ async def upload_resume(file: UploadFile = File(...)):
         if not content:
             return {"status": "error", "message": "Empty file uploaded"}
         
-        # Save temp PDF
         temp_pdf = "temp_resume.pdf"
-        try:
-            with open(temp_pdf, "wb") as f:
-                f.write(content)
-        except Exception as write_err:
-            logger.error(f"Failed to write temp PDF: {write_err}")
-            return {"status": "error", "message": f"Server File Error: {str(write_err)}"}
+        with open(temp_pdf, "wb") as f:
+            f.write(content)
             
-        # Extract text using PyMuPDF
-        try:
-            doc = fitz.open(temp_pdf)
-            text = ""
-            for page in doc:
-                text += page.get_text()
-            doc.close()
-            
-            if not text.strip():
-                os.remove(temp_pdf)
-                return {"status": "error", "message": "Could not extract any text from this PDF. Is it a scanned image?"}
-                
-        except Exception as fitz_err:
-            logger.error(f"PyMuPDF failed to parse PDF: {fitz_err}")
-            if os.path.exists(temp_pdf): os.remove(temp_pdf)
-            return {"status": "error", "message": f"PDF Parse Error: {str(fitz_err)}"}
-
+        doc = fitz.open(temp_pdf)
+        text = ""
+        for page in doc:
+            text += page.get_text()
+        doc.close()
         os.remove(temp_pdf)
-        
-        # Save as master_resume.md
-        try:
-            with open(config.MASTER_RESUME_PATH, "w") as f:
-                f.write(text)
-        except Exception as md_err:
-            logger.error(f"Failed to save master_resume.md: {md_err}")
-            return {"status": "error", "message": f"Storage Error: {str(md_err)}"}
+
+        if not text.strip():
+            return {"status": "error", "message": "Could not extract text from PDF"}
+
+        with open(config.MASTER_RESUME_PATH, "w") as f:
+            f.write(text)
             
         logger.info(f"Updated master resume from {file.filename}")
-        return {"status": "success", "message": "Resume updated and parsed successfully"}
+        return {"status": "success", "message": "Resume updated successfully"}
     except Exception as e:
-        logger.error(f"Unexpected error in upload_resume: {e}")
-        return {"status": "error", "message": f"Unexpected System Error: {str(e)}"}
+        logger.error(f"Upload error: {e}")
+        return {"status": "error", "message": str(e)}
 
 if __name__ == "__main__":
     import uvicorn

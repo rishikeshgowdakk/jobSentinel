@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
-import { Upload, Briefcase, CheckCircle, XCircle, RefreshCw, ExternalLink, FileText, Settings, Save, AlertCircle } from 'lucide-react';
+import { Upload, Briefcase, CheckCircle, XCircle, RefreshCw, ExternalLink, FileText, Settings, Save, AlertCircle, Activity, Terminal } from 'lucide-react';
 
 const API_BASE = 'http://localhost:8000/api';
+const WS_BASE = 'ws://localhost:8000/api/ws/stream';
 
 function App() {
   const [jobs, setJobs] = useState([]);
@@ -10,6 +11,10 @@ function App() {
   const [uploading, setUploading] = useState(false);
   const [message, setMessage] = useState('');
   const [isError, setIsError] = useState(false);
+  
+  // Real-time Logs
+  const [logs, setLogs] = useState([]);
+  const logEndRef = useRef(null);
   
   // Search Preferences
   const [keywords, setKeywords] = useState('');
@@ -44,46 +49,57 @@ function App() {
   useEffect(() => {
     fetchJobs();
     fetchPreferences();
-    const interval = setInterval(fetchJobs, 30000); // Poll every 30s
-    return () => clearInterval(interval);
+
+    // WebSocket Setup
+    const ws = new WebSocket(WS_BASE);
+    
+    ws.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      if (data.type === 'log') {
+        setLogs(prev => [...prev.slice(-49), data.message]);
+      } else if (data.type === 'new_job') {
+        setJobs(prev => [data.data, ...prev]);
+      }
+    };
+
+    ws.onclose = () => console.log('WS Disconnected');
+    
+    return () => ws.close();
   }, []);
+
+  useEffect(() => {
+    logEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [logs]);
 
   const handleFileUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
-
     setUploading(true);
     setIsError(false);
     setMessage('Uploading and parsing resume...');
-    
     const formData = new FormData();
     formData.append('file', file);
-
     try {
       const response = await axios.post(`${API_BASE}/resume/upload`, formData);
       if (response.data.status === 'success') {
         setMessage(response.data.message);
-        setIsError(false);
       } else {
         setMessage(response.data.message);
         setIsError(true);
       }
     } catch (error) {
-      setMessage('Server connection failed. Is the backend running?');
+      setMessage('Server connection failed.');
       setIsError(true);
     }
     setUploading(false);
-    setTimeout(() => setMessage(''), 8000);
+    setTimeout(() => setMessage(''), 5000);
   };
 
   const savePreferences = async () => {
     setSavingPrefs(true);
     try {
       const response = await axios.post(`${API_BASE}/preferences`, {
-        keywords,
-        locations,
-        job_type: jobType,
-        experience_level: expLevel
+        keywords, locations, job_type: jobType, experience_level: expLevel
       });
       setMessage(response.data.message);
       setIsError(false);
@@ -96,184 +112,163 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-200 font-sans selection:bg-blue-500/30">
-      {/* Top Banner */}
-      <header className="bg-slate-900/50 border-b border-slate-800 backdrop-blur-md sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-6 py-4 flex flex-col md:flex-row justify-between items-center gap-4">
-          <div className="flex items-center gap-3">
-            <div className="bg-blue-600 p-2 rounded-xl shadow-lg shadow-blue-900/20">
-              <Briefcase className="text-white" size={28} />
+    <div className="min-h-screen bg-black text-slate-300 font-sans selection:bg-blue-500/30 overflow-x-hidden">
+      {/* Real-time Status Header */}
+      <header className="bg-slate-900/40 border-b border-white/5 backdrop-blur-xl sticky top-0 z-50">
+        <div className="max-w-[1600px] mx-auto px-8 py-5 flex justify-between items-center">
+          <div className="flex items-center gap-4">
+            <div className="bg-blue-600 p-2.5 rounded-2xl shadow-2xl shadow-blue-500/20">
+              <Activity className="text-white animate-pulse" size={24} />
             </div>
             <div>
-              <h1 className="text-2xl font-bold tracking-tight text-white">JobSentinel</h1>
-              <p className="text-xs text-slate-500 font-medium uppercase tracking-widest">Auto-Hunt Active</p>
+              <h1 className="text-xl font-black tracking-tight text-white uppercase italic">JobSentinel <span className="text-blue-500 not-italic font-normal">Live</span></h1>
+              <div className="flex items-center gap-2">
+                <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-ping" />
+                <span className="text-[10px] text-slate-500 font-black uppercase tracking-[0.2em]">System Streaming</span>
+              </div>
             </div>
           </div>
           
-          <div className="flex items-center gap-3">
-            <div className="relative group">
-              <input type="file" id="resume-upload" className="hidden" accept=".pdf" onChange={handleFileUpload} disabled={uploading} />
-              <label htmlFor="resume-upload" className={`flex items-center gap-2 px-4 py-2 rounded-lg font-bold text-sm cursor-pointer transition-all border ${
-                uploading ? 'bg-slate-800 border-slate-700 text-slate-500' : 'bg-slate-800 border-slate-700 hover:border-blue-500 text-slate-300 hover:text-white'
-              }`}>
-                {uploading ? <RefreshCw className="animate-spin" size={18} /> : <Upload size={18} />}
-                {uploading ? 'Parsing...' : 'Update Resume'}
-              </label>
-            </div>
-            <button onClick={fetchJobs} className="p-2 rounded-lg bg-slate-800 border border-slate-700 hover:border-blue-500 text-slate-400 hover:text-white transition-all">
-              <RefreshCw size={20} className={loading ? 'animate-spin' : ''} />
+          <div className="flex items-center gap-4">
+            <input type="file" id="resume-upload" className="hidden" accept=".pdf" onChange={handleFileUpload} />
+            <label htmlFor="resume-upload" className="px-5 py-2.5 rounded-xl font-black text-[11px] uppercase tracking-widest cursor-pointer bg-white/5 border border-white/10 hover:border-blue-500 hover:text-white transition-all">
+              {uploading ? 'Parsing...' : 'Update Context'}
+            </label>
+            <button onClick={fetchJobs} className="p-2.5 rounded-xl bg-white/5 border border-white/10 hover:border-blue-500 text-slate-400 hover:text-white transition-all">
+              <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
             </button>
           </div>
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-6 py-8">
-        {/* Simple Notification Toast */}
-        {message && (
-          <div className={`mb-8 p-4 rounded-xl border flex items-center gap-3 animate-in fade-in slide-in-from-top-2 ${
-            isError ? 'bg-red-500/10 border-red-500/20 text-red-400' : 'bg-green-500/10 border-green-500/20 text-green-400'
-          }`}>
-            {isError ? <AlertCircle size={20} /> : <CheckCircle size={20} />}
-            <span className="font-medium text-sm">{message}</span>
-          </div>
-        )}
+      <main className="max-w-[1600px] mx-auto px-8 py-10 grid grid-cols-1 xl:grid-cols-12 gap-10">
+        
+        {/* Left Column: Controls & Feed */}
+        <div className="xl:col-span-4 space-y-10">
+          
+          {/* Preferences */}
+          <section className="bg-slate-900/50 rounded-3xl border border-white/5 p-8 shadow-2xl">
+            <h2 className="text-xs font-black text-slate-500 uppercase tracking-[0.3em] mb-8 flex items-center gap-3">
+              <Settings size={16} className="text-blue-500" /> Hunt Parameters
+            </h2>
+            <div className="space-y-6">
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-600 uppercase tracking-widest">Target Keywords</label>
+                <input type="text" value={keywords} onChange={(e) => setKeywords(e.target.value)} placeholder="e.g. React, Node" className="w-full bg-black/40 border border-white/5 rounded-2xl px-5 py-3.5 focus:border-blue-500 outline-none transition-all text-sm font-medium" />
+              </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-600 uppercase tracking-widest">Geofence (Strict)</label>
+                <input type="text" value={locations} onChange={(e) => setLocations(e.target.value)} placeholder="e.g. Remote, London" className="w-full bg-black/40 border border-white/5 rounded-2xl px-5 py-3.5 focus:border-blue-500 outline-none transition-all text-sm font-medium" />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-600 uppercase tracking-widest">Commitment</label>
+                  <select value={jobType} onChange={(e) => setJobType(e.target.value)} className="w-full bg-black/40 border border-white/5 rounded-2xl px-5 py-3.5 focus:border-blue-500 outline-none text-sm appearance-none">
+                    <option value="All">All Types</option>
+                    <option value="F">Full-time</option>
+                    <option value="P">Part-time</option>
+                    <option value="I">Internship</option>
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-600 uppercase tracking-widest">Seniority</label>
+                  <select value={expLevel} onChange={(e) => setExpLevel(e.target.value)} className="w-full bg-black/40 border border-white/5 rounded-2xl px-5 py-3.5 focus:border-blue-500 outline-none text-sm appearance-none">
+                    <option value="All">All Levels</option>
+                    <option value="2">Entry/Fresher</option>
+                    <option value="4">Mid-Senior</option>
+                  </select>
+                </div>
+              </div>
+              <button onClick={savePreferences} disabled={savingPrefs} className="w-full bg-blue-600 hover:bg-blue-500 text-white py-4 rounded-2xl font-black text-xs uppercase tracking-[0.2em] transition-all shadow-xl shadow-blue-600/20 mt-4">
+                {savingPrefs ? 'Updating Cluster...' : 'Push Configuration'}
+              </button>
+            </div>
+          </section>
 
-        {/* Configuration Section */}
-        <section className="bg-slate-900 rounded-2xl border border-slate-800 p-8 mb-12 shadow-sm">
-          <h2 className="text-lg font-bold text-white mb-6 flex items-center gap-2">
-            <Settings size={20} className="text-blue-500" /> Hunt Preferences
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <div className="space-y-2">
-              <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Job Keywords</label>
-              <input
-                type="text"
-                value={keywords}
-                onChange={(e) => setKeywords(e.target.value)}
-                placeholder="e.g. Frontend, React"
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 focus:border-blue-500 outline-none transition-all text-sm"
-              />
+          {/* Real-time Terminal */}
+          <section className="bg-slate-900/80 rounded-3xl border border-white/5 p-8 shadow-2xl h-[400px] flex flex-col">
+            <h2 className="text-xs font-black text-slate-500 uppercase tracking-[0.3em] mb-6 flex items-center gap-3">
+              <Terminal size={16} className="text-green-500" /> Live Activity Feed
+            </h2>
+            <div className="flex-1 bg-black/60 rounded-2xl p-5 font-mono text-[11px] overflow-y-auto space-y-2 custom-scrollbar border border-white/5">
+              {logs.length === 0 && <div className="text-slate-700 italic">Waiting for feed...</div>}
+              {logs.map((log, i) => (
+                <div key={i} className="text-green-500/80 leading-relaxed break-all">
+                  <span className="text-slate-700 mr-2">[{new Date().toLocaleTimeString()}]</span>
+                  {log}
+                </div>
+              ))}
+              <div ref={logEndRef} />
             </div>
-            <div className="space-y-2">
-              <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Location</label>
-              <input
-                type="text"
-                value={locations}
-                onChange={(e) => setLocations(e.target.value)}
-                placeholder="e.g. Remote, NY"
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 focus:border-blue-500 outline-none transition-all text-sm"
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Job Type</label>
-              <select
-                value={jobType}
-                onChange={(e) => setJobType(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 focus:border-blue-500 outline-none transition-all text-sm appearance-none"
-              >
-                <option value="All">All Types</option>
-                <option value="F">Full-time</option>
-                <option value="P">Part-time</option>
-              </select>
-            </div>
-            <div className="space-y-2">
-              <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Exp. Level</label>
-              <select
-                value={expLevel}
-                onChange={(e) => setExpLevel(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 focus:border-blue-500 outline-none transition-all text-sm appearance-none"
-              >
-                <option value="All">All Levels</option>
-                <option value="2">Fresher (Entry)</option>
-                <option value="4">Experienced (Mid-Senior)</option>
-              </select>
-            </div>
-          </div>
-          <div className="mt-8 flex justify-end">
-            <button
-              onClick={savePreferences}
-              disabled={savingPrefs}
-              className="bg-blue-600 hover:bg-blue-500 text-white px-8 py-2.5 rounded-xl font-bold transition-all disabled:opacity-50 shadow-lg shadow-blue-600/20 flex items-center gap-2"
-            >
-              {savingPrefs ? <RefreshCw className="animate-spin" size={20} /> : <Save size={20} />}
-              {savingPrefs ? 'Saving...' : 'Apply & Restart Search'}
-            </button>
-          </div>
-        </section>
+          </section>
 
-        {/* Jobs Grid */}
-        <section>
-          <div className="flex items-center justify-between mb-8">
-            <h2 className="text-xl font-bold text-white flex items-center gap-2">
-              Discovered Opportunities
-              <span className="bg-slate-800 text-slate-400 px-2 py-0.5 rounded-md text-xs">{jobs.length}</span>
+        </div>
+
+        {/* Right Column: Discoveries */}
+        <div className="xl:col-span-8">
+          <div className="flex items-center justify-between mb-10">
+            <h2 className="text-xl font-black text-white uppercase italic tracking-widest flex items-center gap-4">
+              Real-time Discoveries
+              <span className="bg-blue-600 text-[10px] font-black not-italic px-3 py-1 rounded-full text-white">{jobs.length} Hits</span>
             </h2>
           </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             {jobs.map((job) => (
-              <div key={job.job_id} className="bg-slate-900 rounded-2xl p-6 border border-slate-800 hover:border-blue-500/50 transition-all group relative overflow-hidden">
-                <div className="flex justify-between items-start mb-4 relative z-10">
-                  <div className="space-y-1">
-                    <h3 className="font-bold text-white leading-tight group-hover:text-blue-400 transition-colors line-clamp-2">{job.title}</h3>
-                    <p className="text-sm text-slate-400 font-medium">{job.company}</p>
+              <div key={job.job_id} className={`group bg-slate-900/40 rounded-[2rem] p-8 border transition-all duration-500 relative overflow-hidden ${
+                job.status === 'tailored' ? 'border-blue-500/30 bg-blue-500/[0.02]' : 'border-white/5 hover:border-white/10'
+              }`}>
+                <div className="relative z-10">
+                  <div className="flex justify-between items-start mb-6">
+                    <div className="space-y-2 max-w-[70%]">
+                      <h3 className="text-lg font-black text-white leading-tight line-clamp-2 group-hover:text-blue-400 transition-colors">{job.title}</h3>
+                      <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">{job.company}</p>
+                    </div>
+                    <div className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest border ${
+                      job.status === 'tailored' ? 'bg-blue-500/10 border-blue-500/20 text-blue-400' : 'bg-slate-800/50 border-white/5 text-slate-600'
+                    }`}>
+                      {job.source || 'Aggregated'}
+                    </div>
                   </div>
-                  <div className={`px-2 py-1 rounded-md text-[10px] font-black uppercase tracking-tighter border ${
-                    job.status === 'tailored' ? 'bg-green-500/10 border-green-500/20 text-green-500' : 'bg-slate-800 border-slate-700 text-slate-500'
-                  }`}>
-                    {job.status}
-                  </div>
-                </div>
 
-                <div className="space-y-3 mb-6 relative z-10">
-                  <div className="flex justify-between items-end mb-1">
-                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Match Score</span>
-                    <span className="text-lg font-mono font-black text-white">{job.ats_score || 0}%</span>
+                  <div className="mb-8">
+                    <div className="flex justify-between items-center mb-3">
+                      <span className="text-[10px] font-black text-slate-600 uppercase tracking-widest">ATS Match Compatibility</span>
+                      <span className={`text-xl font-mono font-black ${
+                        job.ats_score >= 80 ? 'text-blue-400' : 'text-slate-500'
+                      }`}>{job.ats_score || 0}%</span>
+                    </div>
+                    <div className="h-1 bg-white/5 rounded-full overflow-hidden">
+                      <div className={`h-full transition-all duration-[2s] ${
+                        job.ats_score >= 80 ? 'bg-blue-500' : 'bg-slate-700'
+                      }`} style={{ width: `${job.ats_score || 0}%` }} />
+                    </div>
                   </div>
-                  <div className="bg-slate-950 h-1.5 rounded-full overflow-hidden border border-slate-800">
-                    <div 
-                      className={`h-full transition-all duration-1000 ${
-                        job.ats_score >= 80 ? 'bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]' : job.ats_score >= 50 ? 'bg-yellow-500' : 'bg-red-500'
-                      }`}
-                      style={{ width: `${job.ats_score || 0}%` }}
-                    />
-                  </div>
-                </div>
 
-                <div className="flex gap-3 relative z-10">
-                  <a
-                    href={job.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex-1 flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-700 text-white py-2 rounded-xl transition-all text-xs font-bold border border-slate-700"
-                  >
-                    <ExternalLink size={14} /> View
-                  </a>
-                  {job.status === 'tailored' && (
-                    <button className="flex-1 flex items-center justify-center gap-2 bg-blue-600/10 hover:bg-blue-600/20 text-blue-400 py-2 rounded-xl transition-all text-xs font-bold border border-blue-400/20">
-                      <FileText size={14} /> Resume
-                    </button>
-                  )}
+                  <div className="flex gap-4">
+                    <a href={job.url} target="_blank" className="flex-1 bg-white/5 hover:bg-white/10 text-white py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest text-center transition-all border border-white/5">
+                      Explore JD
+                    </a>
+                    {job.status === 'tailored' && (
+                      <button className="flex-1 bg-blue-600/10 hover:bg-blue-600/20 text-blue-400 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all border border-blue-500/20">
+                        Tailored PDF
+                      </button>
+                    )}
+                  </div>
                 </div>
-                
-                <div className="mt-5 pt-4 border-t border-slate-800 text-[10px] text-slate-600 font-bold uppercase flex justify-between">
-                  <span>LinkedIn</span>
-                  <span>{new Date(job.processed_at).toLocaleDateString()}</span>
-                </div>
+                {/* Background Decor */}
+                <div className="absolute -right-10 -top-10 w-40 h-40 bg-blue-500/5 rounded-full blur-[80px] group-hover:bg-blue-500/10 transition-all" />
               </div>
             ))}
           </div>
-          
+
           {jobs.length === 0 && !loading && (
-            <div className="text-center py-32 bg-slate-900/50 rounded-3xl border border-dashed border-slate-800">
-              <div className="bg-slate-800 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-6">
-                <Briefcase size={32} className="text-slate-600" />
-              </div>
-              <p className="text-slate-400 font-medium text-lg">No matches found yet.</p>
-              <p className="text-slate-600 text-sm mt-1">Refine your preferences above to broaden the search.</p>
+            <div className="text-center py-40 bg-slate-900/20 rounded-[3rem] border border-dashed border-white/5">
+              <Activity size={48} className="text-slate-800 mx-auto mb-6 opacity-20" />
+              <p className="text-slate-500 font-black text-sm uppercase tracking-widest">Listening for incoming data...</p>
             </div>
           )}
-        </section>
+        </div>
       </main>
     </div>
   );
