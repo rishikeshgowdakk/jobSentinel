@@ -1,12 +1,12 @@
 import json
-import google.generativeai as genai
+from google import genai
 from src.core.config import config
 from src.core.logger import logger
 
 class GeminiAnalyzer:
     def __init__(self):
-        genai.configure(api_key=config.GEMINI_API_KEY)
-        self.model = genai.GenerativeModel('gemini-1.5-flash')
+        self.client = genai.Client(api_key=config.GEMINI_API_KEY)
+        self.model_name = 'gemini-1.5-flash'
 
     def analyze_job(self, master_resume: str, job_description: str, user_yoe: int = 0, user_tech_stack: list = None):
         tech_stack_str = ", ".join(user_tech_stack) if user_tech_stack else "Not specified"
@@ -45,8 +45,10 @@ class GeminiAnalyzer:
         """
         
         try:
-            response = self.model.generate_content(prompt)
-            # Extract JSON from response (handling potential markdown formatting)
+            response = self.client.models.generate_content(
+                model=self.model_name,
+                contents=prompt
+            )
             text = response.text
             if "```json" in text:
                 text = text.split("```json")[1].split("```")[0]
@@ -73,7 +75,10 @@ class GeminiAnalyzer:
         }}
         """
         try:
-            response = self.model.generate_content(prompt)
+            response = self.client.models.generate_content(
+                model=self.model_name,
+                contents=prompt
+            )
             text = response.text
             if "```json" in text:
                 text = text.split("```json")[1].split("```")[0]
