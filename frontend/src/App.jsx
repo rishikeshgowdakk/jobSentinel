@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Upload, Briefcase, CheckCircle, XCircle, RefreshCw, ExternalLink, FileText } from 'lucide-react';
+import { Upload, Briefcase, CheckCircle, XCircle, RefreshCw, ExternalLink, FileText, Settings, Save } from 'lucide-react';
 
 const API_BASE = 'http://localhost:8000/api';
 
@@ -9,6 +9,12 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [message, setMessage] = useState('');
+  const [showSettings, setShowSettings] = useState(false);
+  
+  // Search Preferences
+  const [keywords, setKeywords] = useState('');
+  const [locations, setLocations] = useState('');
+  const [savingPrefs, setSavingPrefs] = useState(false);
 
   const fetchJobs = async () => {
     setLoading(true);
@@ -21,8 +27,19 @@ function App() {
     setLoading(false);
   };
 
+  const fetchPreferences = async () => {
+    try {
+      const response = await axios.get(`${API_BASE}/preferences`);
+      setKeywords(response.data.keywords);
+      setLocations(response.data.locations);
+    } catch (error) {
+      console.error('Error fetching preferences:', error);
+    }
+  };
+
   useEffect(() => {
     fetchJobs();
+    fetchPreferences();
     const interval = setInterval(fetchJobs, 30000); // Poll every 30s
     return () => clearInterval(interval);
   }, []);
@@ -45,6 +62,21 @@ function App() {
     setUploading(false);
   };
 
+  const savePreferences = async () => {
+    setSavingPrefs(true);
+    try {
+      const response = await axios.post(`${API_BASE}/preferences`, {
+        keywords,
+        locations
+      });
+      setMessage(response.data.message);
+      setTimeout(() => setMessage(''), 5000);
+    } catch (error) {
+      setMessage('Failed to save preferences');
+    }
+    setSavingPrefs(false);
+  };
+
   return (
     <div className="min-h-screen p-8 bg-slate-900 text-slate-100">
       <header className="max-w-6xl mx-auto mb-12 flex justify-between items-center">
@@ -56,6 +88,13 @@ function App() {
         </div>
         
         <div className="flex gap-4 items-center">
+          <button 
+            onClick={() => setShowSettings(!showSettings)}
+            className={`p-2 rounded-lg transition-colors ${showSettings ? 'bg-blue-600 text-white' : 'bg-slate-800 hover:bg-slate-700 text-slate-400'}`}
+            title="Search Settings"
+          >
+            <Settings size={24} />
+          </button>
           <div className="relative">
             <input
               type="file"
@@ -72,7 +111,7 @@ function App() {
               }`}
             >
               {uploading ? <RefreshCw className="animate-spin" /> : <Upload size={20} />}
-              {uploading ? 'Uploading...' : 'Update PDF Resume'}
+              {uploading ? 'Uploading...' : 'Update PDF'}
             </label>
           </div>
           <button 
@@ -83,6 +122,44 @@ function App() {
           </button>
         </div>
       </header>
+
+      {showSettings && (
+        <div className="max-w-6xl mx-auto mb-8 bg-slate-800 p-6 rounded-xl border border-blue-500/30 shadow-2xl animate-in fade-in slide-in-from-top-4">
+          <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+            <Settings className="text-blue-400" /> Search Preferences
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <div>
+              <label className="block text-sm font-medium text-slate-400 mb-2">Target Job Keywords (comma separated)</label>
+              <input
+                type="text"
+                value={keywords}
+                onChange={(e) => setKeywords(e.target.value)}
+                placeholder="Software Engineer, React Developer..."
+                className="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-400 mb-2">Target Locations (comma separated)</label>
+              <input
+                type="text"
+                value={locations}
+                onChange={(e) => setLocations(e.target.value)}
+                placeholder="Remote, San Francisco, London..."
+                className="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+              />
+            </div>
+          </div>
+          <button
+            onClick={savePreferences}
+            disabled={savingPrefs}
+            className="flex items-center gap-2 bg-green-600 hover:bg-green-500 px-6 py-2 rounded-lg font-bold transition-all disabled:opacity-50"
+          >
+            {savingPrefs ? <RefreshCw className="animate-spin" /> : <Save size={20} />}
+            {savingPrefs ? 'Saving...' : 'Save Preferences'}
+          </button>
+        </div>
+      )}
 
       {message && (
         <div className={`max-w-6xl mx-auto mb-6 p-4 rounded-lg text-center font-bold ${

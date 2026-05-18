@@ -38,7 +38,8 @@ class Database:
             logger.error(f"Failed to connect to SQLite: {e}")
 
     def _create_table(self):
-        query = """
+        queries = [
+            """
             CREATE TABLE IF NOT EXISTS processed_jobs (
                 id SERIAL PRIMARY KEY,
                 job_id VARCHAR(255) UNIQUE NOT NULL,
@@ -49,18 +50,55 @@ class Database:
                 processed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 status VARCHAR(50)
             )
-        """
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS settings (
+                key VARCHAR(255) PRIMARY KEY,
+                value TEXT
+            )
+            """
+        ]
+        
+        for query in queries:
+            if self.is_sqlite:
+                query = query.replace("SERIAL PRIMARY KEY", "INTEGER PRIMARY KEY AUTOINCREMENT")
+                query = query.replace("DEFAULT CURRENT_TIMESTAMP", "DEFAULT (datetime('now','localtime'))")
+                
+            try:
+                cur = self.conn.cursor()
+                cur.execute(query)
+                self.conn.commit()
+                cur.close()
+            except Exception as e:
+                logger.error(f"Error creating table: {e}")
+
+    def get_setting(self, key: str, default: str = None) -> str:
+        query = "SELECT value FROM settings WHERE key = ?" if self.is_sqlite else "SELECT value FROM settings WHERE key = %s"
+        try:
+            cur = self.conn.cursor()
+            cur.execute(query, (key,))
+            row = cur.fetchone()
+            cur.close()
+            return row[0] if row else default
+        except Exception as e:
+            logger.error(f"Error fetching setting {key}: {e}")
+            return default
+
+    def set_setting(self, key: str, value: str):
         if self.is_sqlite:
-            query = query.replace("SERIAL PRIMARY KEY", "INTEGER PRIMARY KEY AUTOINCREMENT")
-            query = query.replace("DEFAULT CURRENT_TIMESTAMP", "DEFAULT (datetime('now','localtime'))")
+            query = "INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)"
+        else:
+            query = "INSERT INTO settings (key, value) VALUES (%s, %s) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value"
             
         try:
             cur = self.conn.cursor()
-            cur.execute(query)
+            cur.execute(query, (key, value))
             self.conn.commit()
             cur.close()
         except Exception as e:
-            logger.error(f"Error creating table: {e}")
+            logger.error(f"Error setting {key}: {e}")
+            if self.conn:
+                self.conn.rollback()
 
     def job_exists(self, job_id: str) -> bool:
         query = "SELECT 1 FROM processed_jobs WHERE job_id = ?" if self.is_sqlite else "SELECT 1 FROM processed_jobs WHERE job_id = %s"

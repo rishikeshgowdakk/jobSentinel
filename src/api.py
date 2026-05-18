@@ -3,12 +3,17 @@ import asyncio
 import fitz  # PyMuPDF
 from fastapi import FastAPI, UploadFile, File, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
 from src.core.db import db
 from src.core.config import config
 from src.core.logger import logger
 from src.main import run_scanner
 
 app = FastAPI(title="JobSentinel API")
+
+class Preferences(BaseModel):
+    keywords: str
+    locations: str
 
 # Enable CORS
 app.add_middleware(
@@ -27,6 +32,19 @@ async def startup_event():
 @app.get("/api/jobs")
 async def get_jobs():
     return db.get_recent_jobs()
+
+@app.get("/api/preferences")
+async def get_preferences():
+    return {
+        "keywords": db.get_setting("keywords", config.JOB_KEYWORDS),
+        "locations": db.get_setting("locations", config.JOB_LOCATIONS)
+    }
+
+@app.post("/api/preferences")
+async def update_preferences(prefs: Preferences):
+    db.set_setting("keywords", prefs.keywords)
+    db.set_setting("locations", prefs.locations)
+    return {"status": "success", "message": "Preferences updated"}
 
 @app.post("/api/resume/upload")
 async def upload_resume(file: UploadFile = File(...)):

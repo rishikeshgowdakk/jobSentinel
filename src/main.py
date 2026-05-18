@@ -43,9 +43,21 @@ async def run_scanner():
             logger.info(f"Targeting: {resume_params.get('location')} | YOE: {resume_params.get('yoe')} | Tech: {resume_params.get('tech_stack')}")
 
             logger.info("Scanning for new jobs...")
-            # Use top tech stack skill as keyword and extracted location
-            keywords = resume_params.get('tech_stack', ['Software Engineer'])[:2]
-            locations = [resume_params.get('location', 'Remote')]
+            # Use user-defined preferences if set, otherwise fallback to extracted resume params
+            db_keywords = db.get_setting("keywords")
+            db_locations = db.get_setting("locations")
+            
+            if db_keywords:
+                keywords = [k.strip() for k in db_keywords.split(",")]
+            else:
+                keywords = resume_params.get('tech_stack', ['Software Engineer'])[:2]
+                
+            if db_locations:
+                locations = [l.strip() for l in db_locations.split(",")]
+            else:
+                locations = [resume_params.get('location', 'Remote')]
+            
+            logger.info(f"Using search parameters: Keywords: {keywords} | Locations: {locations}")
             
             new_jobs = await scraper.scrape_linkedin(keywords=keywords, locations=locations)
             
