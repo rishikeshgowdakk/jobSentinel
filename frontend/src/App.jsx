@@ -65,24 +65,6 @@ function App() {
     logEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [logs]);
 
-  const handleFileUpload = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    setUploading(true);
-    const formData = new FormData();
-    formData.append('file', file);
-    try {
-      const response = await axios.post(`${API_BASE}/resume/upload`, formData);
-      setMessage(response.data.message);
-      setIsError(response.data.status !== 'success');
-    } catch (error) {
-      setMessage('Server connection failed.');
-      setIsError(true);
-    }
-    setUploading(false);
-    setTimeout(() => setMessage(''), 5000);
-  };
-
   const savePreferences = async () => {
     setSavingPrefs(true);
     try {
@@ -90,8 +72,10 @@ function App() {
         keywords, locations, job_type: jobType, experience_level: expLevel
       });
       setMessage(response.data.message);
+      setIsError(false);
     } catch (error) {
       setMessage('Failed to save preferences');
+      setIsError(true);
     }
     setSavingPrefs(false);
     setTimeout(() => setMessage(''), 3000);
@@ -114,10 +98,11 @@ function App() {
             </div>
           </div>
           <div className="flex items-center gap-4">
-            <input type="file" id="resume-upload" className="hidden" accept=".pdf" onChange={handleFileUpload} />
-            <label htmlFor="resume-upload" className="px-5 py-2.5 rounded-xl font-black text-[11px] uppercase tracking-widest cursor-pointer bg-white/5 border border-white/10 hover:border-blue-500 hover:text-white transition-all">
-              {uploading ? 'Parsing...' : 'Update Context'}
-            </label>
+            {message && (
+              <span className={`text-xs font-bold px-4 py-2 rounded-xl border ${isError ? 'bg-red-500/10 border-red-500/20 text-red-400' : 'bg-green-500/10 border-green-500/20 text-green-400'}`}>
+                {message}
+              </span>
+            )}
             <button onClick={fetchJobs} className="p-2.5 rounded-xl bg-white/5 border border-white/10 hover:border-blue-500 text-slate-400 hover:text-white transition-all">
               <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
             </button>
@@ -137,8 +122,8 @@ function App() {
                 <input type="text" value={keywords} onChange={(e) => setKeywords(e.target.value)} placeholder="e.g. SDE, Frontend" className="w-full bg-black/40 border border-white/5 rounded-2xl px-5 py-3.5 focus:border-blue-500 outline-none transition-all text-sm font-medium" />
               </div>
               <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-600 uppercase tracking-widest">Geofence (Strict)</label>
-                <input type="text" value={locations} onChange={(e) => setLocations(e.target.value)} placeholder="e.g. Remote, London" className="w-full bg-black/40 border border-white/5 rounded-2xl px-5 py-3.5 focus:border-blue-500 outline-none transition-all text-sm font-medium" />
+                <label className="text-[10px] font-black text-slate-600 uppercase tracking-widest">Locations (Comma separated)</label>
+                <input type="text" value={locations} onChange={(e) => setLocations(e.target.value)} placeholder="e.g. Remote, Bangalore" className="w-full bg-black/40 border border-white/5 rounded-2xl px-5 py-3.5 focus:border-blue-500 outline-none transition-all text-sm font-medium" />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
@@ -160,7 +145,7 @@ function App() {
                 </div>
               </div>
               <button onClick={savePreferences} disabled={savingPrefs} className="w-full bg-blue-600 hover:bg-blue-500 text-white py-4 rounded-2xl font-black text-xs uppercase tracking-[0.2em] transition-all shadow-xl shadow-blue-600/20">
-                {savingPrefs ? 'Pushing Config...' : 'Apply Strict Parameters'}
+                {savingPrefs ? 'Pushing Config...' : 'Apply Parameters'}
               </button>
             </div>
           </section>
@@ -190,51 +175,57 @@ function App() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             {jobs.map((job) => (
               <div key={job.job_id} className={`group bg-slate-900/40 rounded-[2rem] p-8 border transition-all duration-500 relative overflow-hidden ${
-                job.status === 'tailored' ? 'border-blue-500/30 bg-blue-500/[0.02]' : 'border-white/5'
+                job.status === 'matched' ? 'border-blue-500/30 bg-blue-500/[0.02]' : 'border-white/5'
               }`}>
-                <div className="relative z-10">
-                  <div className="flex justify-between items-start mb-6">
-                    <div className="space-y-2 max-w-[70%]">
-                      <h3 className="text-lg font-black text-white leading-tight line-clamp-2 group-hover:text-blue-400 transition-colors">{job.title}</h3>
-                      <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">{job.company}</p>
+                <div className="relative z-10 flex flex-col h-full justify-between">
+                  <div>
+                    <div className="flex justify-between items-start mb-4">
+                      <div className="space-y-1.5 max-w-[70%]">
+                        <h3 className="text-lg font-black text-white leading-tight line-clamp-2 group-hover:text-blue-400 transition-colors">{job.title}</h3>
+                        <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">{job.company}</p>
+                      </div>
+                      <div className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest border ${
+                        job.source === 'LinkedIn' 
+                          ? 'bg-blue-500/10 border-blue-500/20 text-blue-400' 
+                          : job.source === 'Naukri'
+                          ? 'bg-purple-500/10 border-purple-500/20 text-purple-400'
+                          : 'bg-slate-800/50 border-white/5 text-slate-500'
+                      }`}>
+                        {job.source}
+                      </div>
                     </div>
-                    <div className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest border ${
-                      job.status === 'tailored' ? 'bg-blue-500/10 border-blue-500/20 text-blue-400' : 'bg-slate-800/50 border-white/5 text-slate-600'
-                    }`}>
-                      {job.source}
+
+                    <div className="flex flex-wrap gap-x-3 gap-y-1 mb-4 text-[10px] text-slate-500 font-bold uppercase tracking-wider">
+                      {job.location && <span className="flex items-center gap-1"><Briefcase size={12} /> {job.location}</span>}
+                      {job.experience && <span>• {job.experience}</span>}
                     </div>
+
+                    {job.status === 'ignored' && job.rejection_reason && (
+                      <div className="mb-4 p-3 bg-red-500/5 border border-red-500/10 rounded-xl flex items-center gap-2 text-red-400">
+                        <ShieldAlert size={14} />
+                        <span className="text-[9px] font-black uppercase tracking-widest">{job.rejection_reason}</span>
+                      </div>
+                    )}
+
+                    <p className="text-xs text-slate-400 leading-relaxed mb-6 line-clamp-3">
+                      {job.summary || job.description}
+                    </p>
                   </div>
 
-                  {job.ats_score === 0 && job.rejection_reason && (
-                    <div className="mb-6 p-4 bg-red-500/5 border border-red-500/10 rounded-2xl flex items-center gap-3 text-red-400">
-                      <ShieldAlert size={16} />
-                      <span className="text-[10px] font-black uppercase tracking-widest">{job.rejection_reason}</span>
-                    </div>
-                  )}
+                  <div>
+                    {job.skills && (
+                      <div className="flex flex-wrap gap-1.5 mb-6">
+                        {job.skills.split(',').map((skill, idx) => (
+                          <span key={idx} className="px-2 py-0.5 bg-white/5 border border-white/10 rounded-md text-[9px] font-semibold text-slate-400 group-hover:border-blue-500/20 transition-colors">
+                            {skill.trim()}
+                          </span>
+                        ))}
+                      </div>
+                    )}
 
-                  <div className="mb-8">
-                    <div className="flex justify-between items-center mb-3">
-                      <span className="text-[10px] font-black text-slate-600 uppercase tracking-widest">Compatibility</span>
-                      <span className={`text-xl font-mono font-black ${
-                        job.ats_score >= 80 ? 'text-blue-400' : 'text-slate-500'
-                      }`}>{job.ats_score || 0}%</span>
-                    </div>
-                    <div className="h-1 bg-white/5 rounded-full overflow-hidden">
-                      <div className={`h-full transition-all duration-[2s] ${
-                        job.ats_score >= 80 ? 'bg-blue-500' : 'bg-slate-700'
-                      }`} style={{ width: `${job.ats_score || 0}%` }} />
-                    </div>
-                  </div>
-
-                  <div className="flex gap-4">
-                    <a href={job.url} target="_blank" className="flex-1 bg-white/5 hover:bg-white/10 text-white py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest text-center transition-all border border-white/5">
+                    <a href={job.url} target="_blank" rel="noopener noreferrer" className="block w-full bg-white/5 hover:bg-white/10 text-white py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest text-center transition-all border border-white/5 group-hover:border-blue-500/20">
                       Explore JD
                     </a>
-                    {job.status === 'tailored' && (
-                      <button className="flex-1 bg-blue-600/10 hover:bg-blue-600/20 text-blue-400 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all border border-blue-500/20">
-                        Tailored PDF
-                      </button>
-                    )}
                   </div>
                 </div>
                 <div className="absolute -right-10 -top-10 w-40 h-40 bg-blue-500/5 rounded-full blur-[80px]" />
