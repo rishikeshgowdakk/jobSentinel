@@ -39,31 +39,36 @@ class Database:
             logger.error(f"Failed to connect to SQLite: {e}")
 
     def _create_table(self):
-        # We always want our new schemas, so we check or rebuild
+        # We always want our new schemas, so we check or rebuild to support multi-user isolation
         try:
             cur = self.conn.cursor()
-            # Drop old tables to migrate to the new multi-table AI Job Agent schema
             if self.is_sqlite:
-                cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='processed_jobs'")
+                cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='resume_profile'")
                 exists = cur.fetchone()
                 if exists:
-                    # Let's check if 'company_size' is present. If not, drop to update
-                    cur.execute("PRAGMA table_info(processed_jobs)")
+                    # Let's check if 'user_id' is present. If not, drop to update
+                    cur.execute("PRAGMA table_info(resume_profile)")
                     cols = [c[1] for c in cur.fetchall()]
-                    if "company_size" not in cols:
-                        logger.info("Dropping old table layout to migrate to AI Job Agent schema...")
+                    if "user_id" not in cols:
+                        logger.info("Dropping old SQLite tables to migrate to multi-user isolated schema...")
+                        cur.execute("DROP TABLE IF EXISTS settings")
+                        cur.execute("DROP TABLE IF EXISTS resume_profile")
                         cur.execute("DROP TABLE IF EXISTS processed_jobs")
                         cur.execute("DROP TABLE IF EXISTS job_matches")
+                        cur.execute("DROP TABLE IF EXISTS applications")
             else:
-                cur.execute("SELECT table_name FROM information_schema.tables WHERE table_name='processed_jobs'")
+                cur.execute("SELECT table_name FROM information_schema.tables WHERE table_name='resume_profile'")
                 exists = cur.fetchone()
                 if exists:
-                    cur.execute("SELECT column_name FROM information_schema.columns WHERE table_name='processed_jobs' AND column_name='company_size'")
+                    cur.execute("SELECT column_name FROM information_schema.columns WHERE table_name='resume_profile' AND column_name='user_id'")
                     col_exists = cur.fetchone()
                     if not col_exists:
-                        logger.info("Dropping old Postgres table layout to migrate to AI Job Agent schema...")
+                        logger.info("Dropping old Postgres tables to migrate to multi-user isolated schema...")
+                        cur.execute("DROP TABLE IF EXISTS settings CASCADE")
+                        cur.execute("DROP TABLE IF EXISTS resume_profile CASCADE")
                         cur.execute("DROP TABLE IF EXISTS processed_jobs CASCADE")
                         cur.execute("DROP TABLE IF EXISTS job_matches CASCADE")
+                        cur.execute("DROP TABLE IF EXISTS applications CASCADE")
             self.conn.commit()
             cur.close()
         except Exception as e:
@@ -72,13 +77,15 @@ class Database:
         queries = [
             """
             CREATE TABLE IF NOT EXISTS settings (
-                key VARCHAR(255) PRIMARY KEY,
-                value TEXT
+                user_id VARCHAR(255),
+                key VARCHAR(255),
+                value TEXT,
+                PRIMARY KEY (user_id, key)
             )
             """,
             """
             CREATE TABLE IF NOT EXISTS resume_profile (
-                id SERIAL PRIMARY KEY,
+                user_id VARCHAR(255) PRIMARY KEY,
                 raw_text TEXT,
                 structured_data TEXT,
                 embedding TEXT,
@@ -109,7 +116,8 @@ class Database:
             """,
             """
             CREATE TABLE IF NOT EXISTS job_matches (
-                job_id VARCHAR(255) PRIMARY KEY,
+                user_id VARCHAR(255),
+                job_id VARCHAR(255),
                 match_score INTEGER,
                 confidence REAL,
                 matched_skills TEXT,
@@ -117,14 +125,17 @@ class Database:
                 recommendation_reason TEXT,
                 priority VARCHAR(50),
                 apply_immediately BOOLEAN,
-                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (user_id, job_id)
             )
             """,
             """
             CREATE TABLE IF NOT EXISTS applications (
-                job_id VARCHAR(255) PRIMARY KEY,
+                user_id VARCHAR(255),
+                job_id VARCHAR(255),
                 status VARCHAR(100) DEFAULT 'applied',
-                applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (user_id, job_id)
             )
             """
         ]
@@ -142,61 +153,63 @@ class Database:
             except Exception as e:
                 logger.error(f"Error creating table: {e}")
 
-    def get_setting(self, key: str, default: str = None) -> str:
-        query = "SELECT value FROM settings WHERE key = ?" if self.is_sqlite else "SELECT value FROM settings WHERE key = %s"
+    def get_setting(self, user_id: str, key: str, default: str = None) -> str:
+        query = "SELECT value FROM settings WHERE user_id = ? AND key = ?" if self.is_sqlite else "SELECT value FROM settings WHERE user_id = %s AND key = %s"
         try:
             cur = self.conn.cursor()
-            cur.execute(query, (key,))
+            cur.execute(query, (user_id, key))
             row = cur.fetchone()
             cur.close()
             return row[0] if row else default
         except Exception as e:
-            logger.error(f"Error fetching setting {key}: {e}")
+            logger.error(f"Error fetching setting {key} for user {user_id}: {e}")
             return default
 
-    def set_setting(self, key: str, value: str):
+    def set_setting(self, user_id: str, key: str, value: str):
         if self.is_sqlite:
-            query = "INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)"
+            query = "INSERT OR REPLACE INTO settings (user_id, key, value) VALUES (?, ?, ?)"
         else:
-            query = "INSERT INTO settings (key, value) VALUES (%s, %s) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value"
+            query = "INSERT INTO settings (user_id, key, value) VALUES (%s, %s, %s) ON CONFLICT (user_id, key) DO UPDATE SET value = EXCLUDED.value"
             
         try:
             cur = self.conn.cursor()
-            cur.execute(query, (key, value))
+            cur.execute(query, (user_id, key, value))
             self.conn.commit()
             cur.close()
         except Exception as e:
-            logger.error(f"Error setting {key}: {e}")
+            logger.error(f"Error setting {key} for user {user_id}: {e}")
             if self.conn:
                 self.conn.rollback()
 
-    def save_profile(self, raw_text: str, structured_data: dict, embedding: list = None):
-        # Clean existing profiles since we only have one active user in local dashboard mode
+    def save_profile(self, user_id: str, raw_text: str, structured_data: dict, embedding: list = None):
         try:
             cur = self.conn.cursor()
-            cur.execute("DELETE FROM resume_profile")
-            
             embedding_str = json.dumps(embedding) if embedding else ""
             sd_str = json.dumps(structured_data)
             
             if self.is_sqlite:
-                query = "INSERT INTO resume_profile (raw_text, structured_data, embedding) VALUES (?, ?, ?)"
+                query = "INSERT OR REPLACE INTO resume_profile (user_id, raw_text, structured_data, embedding) VALUES (?, ?, ?, ?)"
             else:
-                query = "INSERT INTO resume_profile (raw_text, structured_data, embedding) VALUES (%s, %s, %s)"
+                query = """
+                    INSERT INTO resume_profile (user_id, raw_text, structured_data, embedding) 
+                    VALUES (%s, %s, %s, %s) 
+                    ON CONFLICT (user_id) 
+                    DO UPDATE SET raw_text = EXCLUDED.raw_text, structured_data = EXCLUDED.structured_data, embedding = EXCLUDED.embedding
+                """
                 
-            cur.execute(query, (raw_text, sd_str, embedding_str))
+            cur.execute(query, (user_id, raw_text, sd_str, embedding_str))
             self.conn.commit()
             cur.close()
-            logger.info("Resume profile saved successfully.")
+            logger.info(f"Resume profile saved successfully for user {user_id}.")
         except Exception as e:
-            logger.error(f"Error saving resume profile: {e}")
+            logger.error(f"Error saving resume profile for user {user_id}: {e}")
             if self.conn:
                 self.conn.rollback()
 
-    def get_profile(self) -> dict:
+    def get_profile(self, user_id: str) -> dict:
         try:
             cur = self.conn.cursor()
-            cur.execute("SELECT raw_text, structured_data, embedding FROM resume_profile ORDER BY id DESC LIMIT 1")
+            cur.execute("SELECT raw_text, structured_data, embedding FROM resume_profile WHERE user_id = ?", (user_id,))
             row = cur.fetchone()
             cur.close()
             if row:
@@ -207,8 +220,35 @@ class Database:
                 }
             return None
         except Exception as e:
-            logger.error(f"Error fetching resume profile: {e}")
+            logger.error(f"Error fetching resume profile for user {user_id}: {e}")
             return None
+
+    def get_all_users_profiles(self) -> list:
+        try:
+            cur = self.conn.cursor()
+            cur.execute("SELECT user_id, raw_text, structured_data, embedding FROM resume_profile")
+            rows = cur.fetchall()
+            cur.close()
+            profiles = []
+            for row in rows:
+                profiles.append({
+                    "user_id": row[0],
+                    "raw_text": row[1],
+                    "structured_data": json.loads(row[2]) if row[2] else {},
+                    "embedding": json.loads(row[3]) if row[3] else []
+                })
+            return profiles
+        except Exception as e:
+            logger.error(f"Error fetching all user profiles: {e}")
+            return []
+
+    def get_user_preferences(self, user_id: str) -> dict:
+        return {
+            "keywords": self.get_setting(user_id, "keywords", config.JOB_KEYWORDS),
+            "locations": self.get_setting(user_id, "locations", config.JOB_LOCATIONS),
+            "job_type": self.get_setting(user_id, "job_type", "All"),
+            "experience_level": self.get_setting(user_id, "experience_level", "All")
+        }
 
     def job_exists(self, job_id: str) -> bool:
         query = "SELECT 1 FROM processed_jobs WHERE job_id = ?" if self.is_sqlite else "SELECT 1 FROM processed_jobs WHERE job_id = %s"
@@ -279,15 +319,15 @@ class Database:
             if self.conn:
                 self.conn.rollback()
 
-    def save_match(self, match_data: dict):
+    def save_match(self, user_id: str, match_data: dict):
         try:
             if self.is_sqlite:
                 query = """
                     INSERT INTO job_matches (
-                        job_id, match_score, confidence, matched_skills, 
+                        user_id, job_id, match_score, confidence, matched_skills, 
                         missing_skills, recommendation_reason, priority, apply_immediately
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-                    ON CONFLICT(job_id) DO UPDATE SET
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    ON CONFLICT(user_id, job_id) DO UPDATE SET
                         match_score = excluded.match_score, confidence = excluded.confidence,
                         matched_skills = excluded.matched_skills, missing_skills = excluded.missing_skills,
                         recommendation_reason = excluded.recommendation_reason, priority = excluded.priority,
@@ -296,16 +336,17 @@ class Database:
             else:
                 query = """
                     INSERT INTO job_matches (
-                        job_id, match_score, confidence, matched_skills, 
+                        user_id, job_id, match_score, confidence, matched_skills, 
                         missing_skills, recommendation_reason, priority, apply_immediately
-                    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-                    ON CONFLICT(job_id) DO UPDATE SET
+                    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    ON CONFLICT(user_id, job_id) DO UPDATE SET
                         match_score = EXCLUDED.match_score, confidence = EXCLUDED.confidence,
                         matched_skills = EXCLUDED.matched_skills, missing_skills = EXCLUDED.missing_skills,
                         recommendation_reason = EXCLUDED.recommendation_reason, priority = EXCLUDED.priority,
                         apply_immediately = EXCLUDED.apply_immediately, updated_at = CURRENT_TIMESTAMP
                 """
             params = (
+                user_id,
                 match_data['job_id'],
                 match_data.get('matchScore', 0),
                 match_data.get('confidence', 1.0),
@@ -320,12 +361,12 @@ class Database:
             self.conn.commit()
             cur.close()
         except Exception as e:
-            logger.error(f"Error saving match: {e}")
+            logger.error(f"Error saving match for user {user_id}: {e}")
             if self.conn:
                 self.conn.rollback()
 
-    def get_recent_jobs(self, limit=50):
-        # Joins processed_jobs, job_matches, and applications to get a complete view
+    def get_recent_jobs(self, user_id: str, limit=50):
+        # Joins processed_jobs, job_matches, and applications to get a complete user-specific view
         query = """
             SELECT 
                 j.job_id, j.title, j.company, j.location, j.remote_status, j.salary, 
@@ -334,8 +375,8 @@ class Database:
                 m.match_score, m.confidence, m.matched_skills, m.missing_skills, m.recommendation_reason, m.priority, m.apply_immediately,
                 a.status
             FROM processed_jobs j
-            LEFT JOIN job_matches m ON j.job_id = m.job_id
-            LEFT JOIN applications a ON j.job_id = a.job_id
+            LEFT JOIN job_matches m ON j.job_id = m.job_id AND m.user_id = ?
+            LEFT JOIN applications a ON j.job_id = a.job_id AND a.user_id = ?
             ORDER BY j.processed_at DESC
             LIMIT ?
         """ if self.is_sqlite else """
@@ -346,14 +387,14 @@ class Database:
                 m.match_score, m.confidence, m.matched_skills, m.missing_skills, m.recommendation_reason, m.priority, m.apply_immediately,
                 a.status
             FROM processed_jobs j
-            LEFT JOIN job_matches m ON j.job_id = m.job_id
-            LEFT JOIN applications a ON j.job_id = a.job_id
+            LEFT JOIN job_matches m ON j.job_id = m.job_id AND m.user_id = %s
+            LEFT JOIN applications a ON j.job_id = a.job_id AND a.user_id = %s
             ORDER BY j.processed_at DESC
             LIMIT %s
         """
         try:
             cur = self.conn.cursor()
-            cur.execute(query, (limit,))
+            cur.execute(query, (user_id, user_id, limit))
             rows = cur.fetchall()
             cur.close()
             
@@ -388,35 +429,36 @@ class Database:
                 })
             return jobs
         except Exception as e:
-            logger.error(f"Error fetching recent jobs: {e}")
+            logger.error(f"Error fetching recent jobs for user {user_id}: {e}")
             return []
 
-    def set_job_status(self, job_id: str, status: str):
+    def set_job_status(self, user_id: str, job_id: str, status: str):
         try:
             cur = self.conn.cursor()
             if self.is_sqlite:
-                query = "INSERT OR REPLACE INTO applications (job_id, status) VALUES (?, ?)"
+                query = "INSERT OR REPLACE INTO applications (user_id, job_id, status) VALUES (?, ?, ?)"
             else:
-                query = "INSERT INTO applications (job_id, status) VALUES (%s, %s) ON CONFLICT (job_id) DO UPDATE SET status = EXCLUDED.status"
-            cur.execute(query, (job_id, status))
+                query = "INSERT INTO applications (user_id, job_id, status) VALUES (%s, %s, %s) ON CONFLICT (user_id, job_id) DO UPDATE SET status = EXCLUDED.status"
+            cur.execute(query, (user_id, job_id, status))
             self.conn.commit()
             cur.close()
-            logger.info(f"Updated status for job {job_id} to {status}")
+            logger.info(f"Updated status for job {job_id} to {status} for user {user_id}")
         except Exception as e:
-            logger.error(f"Error setting job status: {e}")
+            logger.error(f"Error setting job status for user {user_id}: {e}")
             if self.conn:
                 self.conn.rollback()
 
-    def get_applications(self):
+    def get_applications(self, user_id: str):
         query = """
             SELECT a.job_id, a.status, a.applied_at, j.title, j.company, j.source
             FROM applications a
             JOIN processed_jobs j ON a.job_id = j.job_id
+            WHERE a.user_id = ?
             ORDER BY a.applied_at DESC
         """
         try:
             cur = self.conn.cursor()
-            cur.execute(query)
+            cur.execute(query, (user_id,))
             rows = cur.fetchall()
             cur.close()
             
@@ -432,18 +474,21 @@ class Database:
                 })
             return apps
         except Exception as e:
-            logger.error(f"Error fetching applications: {e}")
+            logger.error(f"Error fetching applications for user {user_id}: {e}")
             return []
 
-    def delete_profile(self):
+    def delete_profile(self, user_id: str):
         try:
             cur = self.conn.cursor()
-            cur.execute("DELETE FROM resume_profile")
+            cur.execute("DELETE FROM resume_profile WHERE user_id = ?", (user_id,))
+            cur.execute("DELETE FROM settings WHERE user_id = ?", (user_id,))
+            cur.execute("DELETE FROM job_matches WHERE user_id = ?", (user_id,))
+            cur.execute("DELETE FROM applications WHERE user_id = ?", (user_id,))
             self.conn.commit()
             cur.close()
-            logger.info("Resume profile deleted successfully.")
+            logger.info(f"Resume profile and related data deleted successfully for user {user_id}.")
         except Exception as e:
-            logger.error(f"Error deleting resume profile: {e}")
+            logger.error(f"Error deleting resume profile for user {user_id}: {e}")
             if self.conn:
                 self.conn.rollback()
 

@@ -309,91 +309,331 @@ class GeminiAnalyzer:
             }
 
     def generate_market_insights(self, jobs: list) -> dict:
-        if not self.client or not jobs:
+        total_jobs = len(jobs)
+        if total_jobs == 0:
             return {
-                "marketDemandScore": 78,
-                "trendingSkills": ["Docker", "FastAPI", "Playwright", "React", "PostgreSQL"],
-                "averageSalary": "₹12L - ₹24L L.P.A",
-                "mostHiringCompanies": ["Infosys", "Randstad", "Flexm", "Nike"],
-                "insightsSummary": "The market is showing steady hiring activities in Node.js, Python frameworks, and DevOps tools. React developers are heavily favored."
+                "marketDemandScore": 0,
+                "trendingSkills": [],
+                "averageSalary": "N/A",
+                "mostHiringCompanies": [],
+                "insightsSummary": "No job listings scraped yet. Real-time intelligence will populate as scanning proceeds.",
+                "experienceDemands": {"junior": 0, "mid": 0, "senior": 0},
+                "jobTypeDemands": {"internship": 0, "fulltime": 0, "contract": 0}
             }
 
-        job_summaries = "\n".join([f"- {j['title']} at {j['company']} ({j.get('location', '')})" for j in jobs[:20]])
-        prompt = f"""
-        Analyze the following active job market listings and generate insights:
+        # 1. Count skills
+        import re
+        from collections import Counter
         
-        Job Listings:
-        {job_summaries}
+        tech_words = [
+            "Python", "FastAPI", "React", "Docker", "PostgreSQL", "Kubernetes", "Golang", "TypeScript", 
+            "JavaScript", "AWS", "Terraform", "Django", "Flask", "Node.js", "Express", "SQL", "Redis", 
+            "MongoDB", "MySQL", "Java", "Spring Boot", "Git", "CI/CD", "Next.js", "C++", "C#", "Rust",
+            "Tailwind", "Machine Learning", "PyTorch", "TensorFlow", "Pandas", "Kafka"
+        ]
         
-        Provide a JSON object containing:
-        - marketDemandScore: (int 0-100)
-        - trendingSkills: [list of 5 strings]
-        - averageSalary: (string) e.g. "$120,000 - $160,000"
-        - mostHiringCompanies: [list of 4 strings]
-        - insightsSummary: (string) A 2-sentence summary of the market trends.
-        """
-        try:
-            response = self.client.models.generate_content(
-                model=self.model_name,
-                contents=prompt
-            )
-            text = response.text.strip()
-            if "```json" in text:
-                text = text.split("```json")[1].split("```")[0]
-            elif "```" in text:
-                text = text.split("```")[1].split("```")[0]
+        skills_counter = Counter()
+        for j in jobs:
+            # Check explicit skills
+            exp_skills = j.get("skills", "")
+            if exp_skills:
+                for s in exp_skills.split(","):
+                    s_clean = s.strip()
+                    if s_clean:
+                        # Find correct casing
+                        matched_casing = next((w for w in tech_words if w.lower() == s_clean.lower()), s_clean)
+                        skills_counter[matched_casing] += 1
+            # Also search description and title
+            desc = (j.get("description", "") or "").lower()
+            title = (j.get("title", "") or "").lower()
+            for word in tech_words:
+                pattern = r'\b' + re.escape(word.lower()) + r'\b'
+                if re.search(pattern, desc) or re.search(pattern, title):
+                    skills_counter[word] += 1
+
+        trending = [item[0] for item in skills_counter.most_common(8)]
+        if not trending:
+            trending = ["Python", "FastAPI", "React", "Docker", "PostgreSQL"]
+
+        # 2. Count hiring companies
+        company_counter = Counter()
+        for j in jobs:
+            comp = j.get("company")
+            if comp and comp != "N/A":
+                company_counter[comp] += 1
+        most_hiring = [item[0] for item in company_counter.most_common(4)]
+
+        # 3. Analyze salaries
+        salaries = []
+        for j in jobs:
+            sal = j.get("salary", "")
+            if sal and any(char.isdigit() for char in sal):
+                salaries.append(sal)
+        
+        if salaries:
+            unique_sals = list(set(salaries))
+            if len(unique_sals) > 1:
+                avg_salary = f"{unique_sals[0]} - {unique_sals[min(len(unique_sals)-1, 3)]}"
+            else:
+                avg_salary = unique_sals[0]
+        else:
+            avg_salary = "Competitive (Not Disclosed)"
+
+        # 4. Experience demands
+        junior_cnt = 0
+        mid_cnt = 0
+        senior_cnt = 0
+        
+        for j in jobs:
+            exp_str = (j.get("experience", "") or "").lower()
+            title_str = (j.get("title", "") or "").lower()
+            desc_str = (j.get("description", "") or "").lower()
             
-            return json.loads(text.strip())
-        except Exception as e:
-            logger.error(f"Error generating market insights: {e}")
-            return {
-                "marketDemandScore": 75,
-                "trendingSkills": ["Python", "FastAPI", "TypeScript"],
-                "averageSalary": "$110,000",
-                "mostHiringCompanies": [],
-                "insightsSummary": "Failed to parse AI insights."
+            if any(x in exp_str for x in ["0-1", "0-2", "fresher", "junior", "entry", "associate"]) or \
+               any(x in title_str for x in ["junior", "associate", "fresher", "entry"]) or \
+               "0 years" in desc_str or "1 year" in desc_str or "1+ year" in desc_str:
+                junior_cnt += 1
+            elif any(x in exp_str for x in ["5+", "6+", "7+", "8+", "senior", "lead", "principal", "manager"]) or \
+                 any(x in title_str for x in ["senior", "lead", "principal", "staff"]):
+                senior_cnt += 1
+            else:
+                mid_cnt += 1
+                
+        total_exp = junior_cnt + mid_cnt + senior_cnt
+        if total_exp > 0:
+            junior_pct = int((junior_cnt / total_exp) * 100)
+            senior_pct = int((senior_cnt / total_exp) * 100)
+            mid_pct = 100 - junior_pct - senior_pct
+        else:
+            junior_pct, mid_pct, senior_pct = 33, 34, 33
+
+        # 5. Job Type demands
+        intern_cnt = 0
+        ft_cnt = 0
+        contract_cnt = 0
+        for j in jobs:
+            title_str = (j.get("title", "") or "").lower()
+            desc_str = (j.get("description", "") or "").lower()
+            
+            if "intern" in title_str or "internship" in title_str or "intern" in desc_str:
+                intern_cnt += 1
+            elif "contract" in title_str or "freelance" in title_str or "temporary" in desc_str or "contract" in desc_str:
+                contract_cnt += 1
+            else:
+                ft_cnt += 1
+                
+        total_types = intern_cnt + ft_cnt + contract_cnt
+        if total_types > 0:
+            intern_pct = int((intern_cnt / total_types) * 100)
+            contract_pct = int((contract_cnt / total_types) * 100)
+            ft_pct = 100 - intern_pct - contract_pct
+        else:
+            intern_pct, ft_pct, contract_pct = 15, 75, 10
+
+        demand_score = min(100, int(total_jobs * 2.5) + 60)
+
+        insights_summary = (
+            f"Analyzing {total_jobs} active job listings in the database. "
+            f"Currently, {junior_pct}% of roles are open to early career or entry-level talent (0-2 years exp), "
+            f"while internships represent {intern_pct}% of the market volume. "
+            f"The tech stack trends heavily towards {', '.join(trending[:3])}."
+        )
+
+        return {
+            "marketDemandScore": demand_score,
+            "trendingSkills": trending,
+            "averageSalary": avg_salary,
+            "mostHiringCompanies": most_hiring if most_hiring else ["Multiple Hirers"],
+            "insightsSummary": insights_summary,
+            "experienceDemands": {
+                "junior": junior_pct,
+                "mid": mid_pct,
+                "senior": senior_pct
+            },
+            "jobTypeDemands": {
+                "internship": intern_pct,
+                "fulltime": ft_pct,
+                "contract": contract_pct
             }
+        }
 
     def generate_learning_recommendations(self, missing_skills: list) -> list:
-        if not self.client or not missing_skills:
-            return [
-                {
-                    "skill": "Docker",
-                    "course": "Docker Mastery (Udemy)",
-                    "project": "Build a multi-container microservice system on local cluster",
-                    "certification": "Docker Certified Associate",
-                    "roi": "High (Requested in 84% of postings)",
-                    "learningTime": "2 weeks"
-                }
-            ]
+        # Build local catalog for instant dynamic real-time recommendation without API delays
+        local_catalog = {
+            "Docker": {
+                "course": "Docker Mastery: with Kubernetes + Swarm (Udemy)",
+                "project": "Containerize a multi-service PostgreSQL & FastAPI app using Docker Compose",
+                "certification": "Docker Certified Associate (DCA)",
+                "roi": "High (Demanded in 82% of DevOps and Backend positions)",
+                "learningTime": "1-2 weeks"
+            },
+            "Kubernetes": {
+                "course": "Certified Kubernetes Administrator (CKA) with Practice Labs (KodeKloud)",
+                "project": "Deploy a highly-available auto-scaling web application cluster",
+                "certification": "Certified Kubernetes Administrator (CKA)",
+                "roi": "Very High (Standard for enterprise orchestration and container management)",
+                "learningTime": "3-4 weeks"
+            },
+            "Kafka": {
+                "course": "Apache Kafka Series - Learn Apache Kafka for Beginners v2 (Udemy)",
+                "project": "Build a real-time event streaming pipeline processing website clickstreams",
+                "certification": "Confluent Certified Developer for Apache Kafka (CCDAK)",
+                "roi": "High (Standard for high-throughput stream processing systems)",
+                "learningTime": "2 weeks"
+            },
+            "Terraform": {
+                "course": "HashiCorp Certified: Terraform Associate (Udemy)",
+                "project": "Provision multi-region AWS network resources and VPC infrastructure via code",
+                "certification": "HashiCorp Certified: Terraform Associate",
+                "roi": "High (Industry benchmark for Infrastructure as Code)",
+                "learningTime": "1-2 weeks"
+            },
+            "AWS": {
+                "course": "AWS Certified Solutions Architect Associate (Stephane Maarek)",
+                "project": "Architect a serverless, highly-available React application hosting platform",
+                "certification": "AWS Certified Solutions Architect - Associate",
+                "roi": "Critical (AWS remains the dominant global cloud computing provider)",
+                "learningTime": "4 weeks"
+            },
+            "FastAPI": {
+                "course": "Modern APIs with FastAPI (Talk Python Training)",
+                "project": "Build an asynchronous high-performance REST API with OAuth2 and PostgreSQL",
+                "certification": "Python Institute Certified Professional",
+                "roi": "High (Fastest growing modern python backend framework)",
+                "learningTime": "1 week"
+            },
+            "React": {
+                "course": "React - The Complete Guide (Maximilian Schwarzmüller)",
+                "project": "Build a fully-responsive interactive dark mode admin dashboard",
+                "certification": "Meta Front-End Developer Professional Certificate",
+                "roi": "Critical (Top client-side web framework in global demand)",
+                "learningTime": "2-3 weeks"
+            },
+            "Next.js": {
+                "course": "Next.js Dev to Deployment (Udemy)",
+                "project": "Build a full-stack SEO-optimized server-side-rendered e-commerce platform",
+                "certification": "Vercel Next.js Certification",
+                "roi": "High (Standard for professional production React applications)",
+                "learningTime": "2 weeks"
+            },
+            "PostgreSQL": {
+                "course": "PostgreSQL Bootcamp: Go From Beginner to Advanced (Udemy)",
+                "project": "Design and optimize a database schema with indexing and JSONB queries",
+                "certification": "PostgreSQL Professional Certification",
+                "roi": "High (Most preferred relational database for modern engineering projects)",
+                "learningTime": "1 week"
+            },
+            "Redis": {
+                "course": "Redis University - Redis for Python Developers",
+                "project": "Implement distributed caching and rate-limiting middleware for your REST API",
+                "certification": "Redis Certified Developer",
+                "roi": "Medium-High (Universal key-value caching standard)",
+                "learningTime": "1 week"
+            },
+            "TypeScript": {
+                "course": "Understanding TypeScript - 2026 Edition (Udemy)",
+                "project": "Convert a large Node.js / JavaScript express backend to strict TypeScript type safety",
+                "certification": "Microsoft Certified Specialist",
+                "roi": "High (Rapidly replacing vanilla JavaScript for backend and frontend scale)",
+                "learningTime": "1 week"
+            },
+            "Python": {
+                "course": "Python Deep Dive (Fred Baptiste)",
+                "project": "Write custom decorators, asynchronous loops, and memory-efficient generators",
+                "certification": "PCAP Certified Associate in Python Programming",
+                "roi": "Critical (Ubiquitous language for Web, AI, Data Science)",
+                "learningTime": "2 weeks"
+            },
+            "Golang": {
+                "course": "Go: The Complete Developer's Guide (Stephen Grider)",
+                "project": "Write a highly-concurrent web crawler utilizing channels and Goroutines",
+                "certification": "Google Go Programming Certificate",
+                "roi": "High (Dominates microservices infrastructure and cloud-native toolings)",
+                "learningTime": "2 weeks"
+            },
+            "Machine Learning": {
+                "course": "Machine Learning Zoomcamp (DataTalksClub)",
+                "project": "Train, evaluate, and deploy a random forest classifier to production behind an API",
+                "certification": "Google Cloud Professional Machine Learning Engineer",
+                "roi": "High (Core foundation for modern AI development pipelines)",
+                "learningTime": "4 weeks"
+            },
+            "Git": {
+                "course": "Git & GitHub Complete Guide: Practical Bootcamp (Udemy)",
+                "project": "Configure automated git hooks and pull request linting actions",
+                "certification": "Git Specialist Certificate",
+                "roi": "Standard (Essential for every collaborative developer workflow)",
+                "learningTime": "3 days"
+            },
+            "CI/CD": {
+                "course": "GitHub Actions, Travis CI, and Jenkins Pipelines (Udemy)",
+                "project": "Write a pipeline that runs tests, builds docker images, and deploys to cloud upon merge",
+                "certification": "DevOps Engineer Professional",
+                "roi": "High (Crucial skill for modern automated agile deployments)",
+                "learningTime": "1 week"
+            }
+        }
 
-        prompt = f"""
-        For each of these missing technical skills, suggest actionable learning resources.
-        Missing Skills: {', '.join(missing_skills)}
-        
-        Output a JSON array of objects, where each object contains:
-        - skill: (string)
-        - course: (string) Course suggestion
-        - project: (string) Practical project idea
-        - certification: (string) Recommended certification
-        - roi: (string) Return-on-investment estimation
-        - learningTime: (string) e.g., '3 weeks'
-        """
-        try:
-            response = self.client.models.generate_content(
-                model=self.model_name,
-                contents=prompt
-            )
-            text = response.text.strip()
-            if "```json" in text:
-                text = text.split("```json")[1].split("```")[0]
-            elif "```" in text:
-                text = text.split("```")[1].split("```")[0]
+        # If Gemini client is active, we can generate dynamic personalized recommendations
+        if self.client:
+            prompt = f"""
+            For each of these missing technical skills, suggest actionable learning resources.
+            Missing Skills: {', '.join(missing_skills)}
             
-            return json.loads(text.strip())
-        except Exception as e:
-            logger.error(f"Error generating learning recommendations: {e}")
-            return []
+            Output a JSON array of objects, where each object contains:
+            - skill: (string)
+            - course: (string) Course suggestion
+            - project: (string) Practical project idea
+            - certification: (string) Recommended certification
+            - roi: (string) Return-on-investment estimation
+            - learningTime: (string) e.g., '3 weeks'
+            """
+            try:
+                response = self.client.models.generate_content(
+                    model=self.model_name,
+                    contents=prompt
+                )
+                text = response.text.strip()
+                if "```json" in text:
+                    text = text.split("```json")[1].split("```")[0]
+                elif "```" in text:
+                    text = text.split("```")[1].split("```")[0]
+                
+                return json.loads(text.strip())
+            except Exception as e:
+                logger.error(f"Error generating learning recommendations: {e}")
+
+        # Fallback to local catalog
+        recommendations = []
+        for s in missing_skills:
+            # Find closest match or create template
+            cat = local_catalog.get(s)
+            if not cat:
+                # Search case-insensitively
+                found = False
+                for key, val in local_catalog.items():
+                    if key.lower() == s.lower():
+                        cat = val
+                        found = True
+                        break
+                if not found:
+                    # Dynamic template fallback
+                    cat = {
+                        "course": f"{s} Complete Bootcamp / Developer Guide (Udemy)",
+                        "project": f"Build a prototype demonstrating clean application of {s}",
+                        "certification": f"{s} Developer Certificate",
+                        "roi": "Medium-High (Demanded in local developer job listings)",
+                        "learningTime": "1-2 weeks"
+                    }
+            recommendations.append({
+                "skill": s,
+                "course": cat["course"],
+                "project": cat["project"],
+                "certification": cat["certification"],
+                "roi": cat["roi"],
+                "learningTime": cat["learningTime"]
+            })
+        return recommendations
 
     def generate_resume_suggestions(self, profile: dict, jobs: list) -> dict:
         if not self.client or not profile or not jobs:

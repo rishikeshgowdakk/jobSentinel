@@ -7,8 +7,17 @@ import {
   User, Check, Phone, Mail, MapPin, AlertCircle
 } from 'lucide-react';
 
+// Initialize or retrieve unique local user session
+let userId = localStorage.getItem('jobsentinel_user_id');
+if (!userId) {
+  userId = 'user_' + Math.random().toString(36).substring(2, 11);
+  localStorage.setItem('jobsentinel_user_id', userId);
+}
+// Attach to all outgoing axios requests automatically
+axios.defaults.headers.common['X-User-ID'] = userId;
+
 const API_BASE = 'http://localhost:8000/api';
-const WS_BASE = 'ws://localhost:8000/api/ws/stream';
+const WS_BASE = `ws://localhost:8000/api/ws/stream?user_id=${userId}`;
 
 function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -508,35 +517,86 @@ function App() {
             {/* Bottom Market Intelligence */}
             <div className="carbon-panel p-8 space-y-6">
               <div>
-                <span className="text-[10px] font-bold text-carbon-muted font-mono uppercase block mb-1">04. Market Demands</span>
-                <h3 className="text-xs font-bold uppercase tracking-widest text-white">Career Intelligence Analytics</h3>
+                <span className="text-[10px] font-bold text-carbon-muted font-mono uppercase block mb-1">04. Real-time Market Demands</span>
+                <h3 className="text-xs font-bold uppercase tracking-widest text-white">Live Career Intelligence Analytics</h3>
               </div>
 
               {marketInsights ? (
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 text-xs leading-relaxed">
-                  <div className="lg:col-span-6 space-y-3">
-                    <div className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Active Demands Summary</div>
+                  <div className="lg:col-span-4 space-y-3">
+                    <div className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-2">Active Demands Summary</div>
                     <p className="text-slate-300 font-light border-l border-zinc-800 pl-4 py-1">
                       {marketInsights.insightsSummary}
                     </p>
+                    <div className="pt-2 space-y-1.5 font-light">
+                      <div className="flex justify-between"><span className="text-slate-500">Average Band:</span> <span className="font-bold text-emerald-400 font-mono">{marketInsights.averageSalary}</span></div>
+                      <div className="flex justify-between"><span className="text-slate-500">Top Hirers:</span> <span className="font-bold text-white text-right truncate max-w-[150px]">{marketInsights.mostHiringCompanies?.join(', ')}</span></div>
+                    </div>
                   </div>
                   
-                  <div className="lg:col-span-3 space-y-3">
-                    <div className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Trending Tech Gaps</div>
-                    <div className="flex flex-wrap gap-1.5">
-                      {marketInsights.trendingSkills?.map((skill, idx) => (
-                        <span key={idx} className="px-2 py-0.5 bg-zinc-900 border border-zinc-800 text-slate-300 text-[10px] font-mono">
-                          {skill}
-                        </span>
-                      ))}
+                  {/* Experience Level Demands */}
+                  <div className="lg:col-span-4 space-y-4">
+                    <div className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Experience level splits</div>
+                    
+                    <div className="space-y-2">
+                      <div className="flex justify-between text-[10px] font-bold tracking-wider text-slate-400">
+                        <span>Junior / Fresher (0-2 Yrs)</span>
+                        <span className="font-mono text-white">{marketInsights.experienceDemands?.junior || 0}%</span>
+                      </div>
+                      <div className="w-full h-1 bg-zinc-900 rounded-full overflow-hidden">
+                        <div className="h-full bg-emerald-500 transition-all duration-500" style={{ width: `${marketInsights.experienceDemands?.junior || 0}%` }}></div>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <div className="flex justify-between text-[10px] font-bold tracking-wider text-slate-400">
+                        <span>Mid Level (2-5 Yrs)</span>
+                        <span className="font-mono text-white">{marketInsights.experienceDemands?.mid || 0}%</span>
+                      </div>
+                      <div className="w-full h-1 bg-zinc-900 rounded-full overflow-hidden">
+                        <div className="h-full bg-amber-500 transition-all duration-500" style={{ width: `${marketInsights.experienceDemands?.mid || 0}%` }}></div>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <div className="flex justify-between text-[10px] font-bold tracking-wider text-slate-400">
+                        <span>Senior / Staff (5+ Yrs)</span>
+                        <span className="font-mono text-white">{marketInsights.experienceDemands?.senior || 0}%</span>
+                      </div>
+                      <div className="w-full h-1 bg-zinc-900 rounded-full overflow-hidden">
+                        <div className="h-full bg-purple-500 transition-all duration-500" style={{ width: `${marketInsights.experienceDemands?.senior || 0}%` }}></div>
+                      </div>
                     </div>
                   </div>
 
-                  <div className="lg:col-span-3 space-y-3">
-                    <div className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Stats Summary</div>
-                    <div className="space-y-1.5 font-light">
-                      <div className="flex justify-between"><span className="text-slate-500">Average Band:</span> <span className="font-bold text-white font-mono">{marketInsights.averageSalary}</span></div>
-                      <div className="flex justify-between"><span className="text-slate-500">Top Hirers:</span> <span className="font-bold text-white text-right truncate max-w-[120px]">{marketInsights.mostHiringCompanies?.join(', ')}</span></div>
+                  {/* Job Type & Tech Stack Demands */}
+                  <div className="lg:col-span-4 space-y-4">
+                    <div className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Job Type & Trending Tech</div>
+                    
+                    <div className="grid grid-cols-3 gap-2">
+                      <div className="bg-zinc-950 p-2 text-center border border-zinc-850">
+                        <div className="text-[8px] uppercase text-slate-500">Intern</div>
+                        <div className="text-sm font-bold font-mono text-blue-400 mt-1">{marketInsights.jobTypeDemands?.internship || 0}%</div>
+                      </div>
+                      <div className="bg-zinc-950 p-2 text-center border border-zinc-850">
+                        <div className="text-[8px] uppercase text-slate-500">Fulltime</div>
+                        <div className="text-sm font-bold font-mono text-emerald-400 mt-1">{marketInsights.jobTypeDemands?.fulltime || 0}%</div>
+                      </div>
+                      <div className="bg-zinc-950 p-2 text-center border border-zinc-850">
+                        <div className="text-[8px] uppercase text-slate-500">Contract</div>
+                        <div className="text-sm font-bold font-mono text-yellow-400 mt-1">{marketInsights.jobTypeDemands?.contract || 0}%</div>
+                      </div>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <div className="text-[8px] font-bold text-slate-500 uppercase tracking-widest">Trending Tech Gaps</div>
+                      <div className="flex flex-wrap gap-1">
+                        {marketInsights.trendingSkills?.map((skill, idx) => (
+                          <span key={idx} className="px-1.5 py-0.5 bg-zinc-900 border border-zinc-850 text-slate-300 text-[9px] font-mono">
+                            {skill}
+                          </span>
+                        ))}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -731,33 +791,39 @@ function App() {
 
                           <div className="flex gap-2">
                             {job.status !== 'applied' ? (
-                              <button 
+                              <a 
+                                href={job.url} 
+                                target="_blank" 
+                                rel="noopener noreferrer" 
                                 onClick={() => updateJobStatus(job.job_id, 'applied')}
-                                className="px-4 py-2 bg-white text-black hover:bg-slate-200 text-[10px] font-bold uppercase tracking-widest transition-all"
+                                className="px-4 py-2 bg-white text-black hover:bg-slate-200 text-[10px] font-bold uppercase tracking-widest text-center transition-all"
                               >
-                                Applied
-                              </button>
+                                {job.company && job.company !== 'N/A' ? `Apply to ${job.company}` : `Apply Now`}
+                              </a>
                             ) : (
-                              <span className="px-3 py-2 bg-zinc-900 border border-zinc-800 text-slate-400 text-[10px] font-bold uppercase tracking-widest flex items-center gap-1.5">
-                                <Check size={10} /> Applied
-                              </span>
+                              <div className="flex gap-2">
+                                <span className="px-3 py-2 bg-zinc-900 border border-zinc-800 text-slate-400 text-[10px] font-bold uppercase tracking-widest flex items-center gap-1.5">
+                                  <Check size={10} /> Applied
+                                </span>
+                                <a 
+                                  href={job.url} 
+                                  target="_blank" 
+                                  rel="noopener noreferrer" 
+                                  className="px-3 py-2 bg-zinc-900 border border-zinc-800 text-slate-300 hover:bg-zinc-800 text-[10px] font-bold uppercase tracking-widest text-center transition-all"
+                                >
+                                  Revisit
+                                </a>
+                              </div>
                             )}
                             {job.status !== 'saved' && job.status !== 'applied' && (
                               <button 
                                 onClick={() => updateJobStatus(job.job_id, 'saved')}
-                                className="p-2 bg-zinc-900 border border-zinc-800 text-slate-400 hover:text-white transition-all"
+                                className="p-2 bg-zinc-900 border border-zinc-800 text-slate-400 hover:text-white transition-all animate-pulse"
+                                title="Bookmark Listing"
                               >
                                 <Bookmark size={12} />
                               </button>
                             )}
-                            <a 
-                              href={job.url} 
-                              target="_blank" 
-                              rel="noopener noreferrer" 
-                              className="px-4 py-2 bg-zinc-900 border border-zinc-800 text-slate-300 hover:bg-zinc-800 text-[10px] font-bold uppercase tracking-widest text-center transition-all"
-                            >
-                              JD Link
-                            </a>
                           </div>
                         </div>
                       </div>

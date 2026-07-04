@@ -1,8 +1,9 @@
 import os
 import asyncio
 import json
+import math
 import fitz  # PyMuPDF
-from fastapi import FastAPI, UploadFile, File, BackgroundTasks, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, UploadFile, File, BackgroundTasks, WebSocket, WebSocketDisconnect, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List
@@ -26,22 +27,48 @@ class JobStatusUpdate(BaseModel):
 class PasteResume(BaseModel):
     text: str
 
-# Connection Manager for WebSockets
+# Helper to calculate cosine similarity for local backfill evaluations
+def calculate_cosine_similarity(v1, v2):
+    if not v1 or not v2:
+        return 0.0
+    dot_product = sum(x*y for x, y in zip(v1, v2))
+    magnitude1 = math.sqrt(sum(x*x for x in v1))
+    magnitude2 = math.sqrt(sum(x*x for x in v2))
+    if not magnitude1 or not magnitude2:
+        return 0.0
+    return dot_product / (magnitude1 * magnitude2)
+
+# Extract user_id from custom header X-User-ID or fallback
+def get_user_id(request: Request) -> str:
+    user_id = request.headers.get("x-user-id")
+    if not user_id or user_id == "null" or user_id == "undefined":
+        return "default_user"
+    return user_id
+
+# Connection Manager for WebSockets to support user-specific channels
 class ConnectionManager:
     def __init__(self):
-        self.active_connections: List[WebSocket] = []
+        self.connections: List[tuple] = [] # list of (WebSocket, user_id)
 
-    async def connect(self, websocket: WebSocket):
+    async def connect(self, websocket: WebSocket, user_id: str):
         await websocket.accept()
-        self.active_connections.append(websocket)
+        self.connections.append((websocket, user_id))
 
     def disconnect(self, websocket: WebSocket):
-        self.active_connections.remove(websocket)
+        self.connections = [c for c in self.connections if c[0] != websocket]
+
+    async def send_to_user(self, user_id: str, message: dict):
+        for ws, uid in self.connections:
+            if uid == user_id:
+                try:
+                    await ws.send_json(message)
+                except Exception:
+                    continue
 
     async def broadcast(self, message: dict):
-        for connection in self.active_connections:
+        for ws, uid in self.connections:
             try:
-                await connection.send_json(message)
+                await ws.send_json(message)
             except Exception:
                 continue
 
@@ -62,59 +89,114 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Background task to evaluate existing database jobs against a newly uploaded resume
+async def evaluate_existing_jobs(user_id: str):
+    try:
+        logger.info(f"Backfill: Evaluating existing jobs for newly uploaded profile of user {user_id}...")
+        profile = db.get_profile(user_id)
+        if not profile:
+            logger.warning(f"Backfill: No profile found for user {user_id}")
+            return
+            
+        cur = db.conn.cursor()
+        cur.execute("SELECT job_id, title, description, embedding FROM processed_jobs")
+        rows = cur.fetchall()
+        cur.close()
+        
+        if not rows:
+            logger.info("Backfill: No global crawled jobs found in database to evaluate.")
+            return
+
+        analyzer = GeminiAnalyzer()
+        prefs = db.get_user_preferences(user_id)
+        
+        logger.info(f"Backfill: Matching {len(rows)} existing jobs against new resume profile for {user_id}...")
+        
+        for row in rows:
+            job_id, title, description, embedding_str = row
+            job_embedding = json.loads(embedding_str) if embedding_str else []
+            
+            match_analysis = analyzer.analyze_job_semantic(
+                profile=profile,
+                job_title=title,
+                job_description=description,
+                target_seniority=prefs.get("experience_level", "All"),
+                target_job_type=prefs.get("job_type", "All")
+            )
+            
+            vector_sim = calculate_cosine_similarity(job_embedding, profile.get('embedding', []))
+            semantic_score = match_analysis.get('matchScore', 60)
+            combined_score = int(0.25 * (vector_sim * 100) + 0.75 * semantic_score)
+            combined_score = min(max(combined_score, 0), 100)
+            
+            match_analysis['matchScore'] = combined_score
+            match_analysis['job_id'] = job_id
+            
+            db.save_match(user_id, match_analysis)
+            
+        logger.info(f"Backfill: Evaluation complete for user {user_id}. {len(rows)} jobs processed.")
+    except Exception as e:
+        logger.error(f"Backfill matching failed for user {user_id}: {e}")
+
 @app.on_event("startup")
 async def startup_event():
-    # Start the scanner
-    asyncio.create_task(run_scanner(broadcast_callback=manager.broadcast))
+    # Start the scanner with targeted user notifications/broadcast callback
+    asyncio.create_task(run_scanner(broadcast_callback=manager.send_to_user))
     # Start the log broadcaster
     asyncio.create_task(log_broadcaster())
 
 @app.websocket("/api/ws/stream")
-async def websocket_endpoint(websocket: WebSocket):
-    await manager.connect(websocket)
+async def websocket_endpoint(websocket: WebSocket, user_id: str = "default_user"):
+    await manager.connect(websocket, user_id)
     try:
         while True:
-            # Wait for any messages from client to keep connection alive
+            # Keep WebSocket connection alive
             await websocket.receive_text()
     except WebSocketDisconnect:
         manager.disconnect(websocket)
 
 @app.get("/api/jobs")
-async def get_jobs():
-    return db.get_recent_jobs()
+async def get_jobs(request: Request):
+    user_id = get_user_id(request)
+    return db.get_recent_jobs(user_id=user_id)
 
 @app.post("/api/jobs/{job_id}/status")
-async def update_job_status(job_id: str, update: JobStatusUpdate):
-    db.set_job_status(job_id, update.status)
+async def update_job_status(job_id: str, update: JobStatusUpdate, request: Request):
+    user_id = get_user_id(request)
+    db.set_job_status(user_id, job_id, update.status)
     return {"status": "success", "message": f"Job status updated to {update.status}"}
 
 @app.get("/api/profile")
-async def get_profile():
-    profile = db.get_profile()
+async def get_profile(request: Request):
+    user_id = get_user_id(request)
+    profile = db.get_profile(user_id)
     if profile:
         return profile["structured_data"]
     return None
 
 @app.get("/api/preferences")
-async def get_preferences():
+async def get_preferences(request: Request):
+    user_id = get_user_id(request)
     return {
-        "keywords": db.get_setting("keywords", config.JOB_KEYWORDS),
-        "locations": db.get_setting("locations", config.JOB_LOCATIONS),
-        "job_type": db.get_setting("job_type", "All"),
-        "experience_level": db.get_setting("experience_level", "All")
+        "keywords": db.get_setting(user_id, "keywords", config.JOB_KEYWORDS),
+        "locations": db.get_setting(user_id, "locations", config.JOB_LOCATIONS),
+        "job_type": db.get_setting(user_id, "job_type", "All"),
+        "experience_level": db.get_setting(user_id, "experience_level", "All")
     }
 
 @app.post("/api/preferences")
-async def update_preferences(prefs: Preferences):
-    db.set_setting("keywords", prefs.keywords)
-    db.set_setting("locations", prefs.locations)
-    db.set_setting("job_type", prefs.job_type)
-    db.set_setting("experience_level", prefs.experience_level)
+async def update_preferences(prefs: Preferences, request: Request):
+    user_id = get_user_id(request)
+    db.set_setting(user_id, "keywords", prefs.keywords)
+    db.set_setting(user_id, "locations", prefs.locations)
+    db.set_setting(user_id, "job_type", prefs.job_type)
+    db.set_setting(user_id, "experience_level", prefs.experience_level)
     return {"status": "success", "message": "Preferences updated"}
 
 @app.post("/api/resume/upload")
-async def upload_resume(file: UploadFile = File(...)):
+async def upload_resume(background_tasks: BackgroundTasks, request: Request, file: UploadFile = File(...)):
     try:
+        user_id = get_user_id(request)
         filename = file.filename.lower()
         if not filename.endswith(('.pdf', '.txt', '.md')):
             return {"status": "error", "message": "Only PDF, TXT, and MD files are supported"}
@@ -141,66 +223,76 @@ async def upload_resume(file: UploadFile = File(...)):
 
         # Run parsing & embeddings
         analyzer = GeminiAnalyzer()
-        logger.info("Extracting structured details from uploaded resume...")
+        logger.info(f"Extracting structured details from uploaded resume for user {user_id}...")
         structured_data = analyzer.extract_resume_parameters(text)
         
-        logger.info("Generating semantic embeddings for the resume...")
+        logger.info(f"Generating semantic embeddings for resume of user {user_id}...")
         embedding = analyzer.get_embedding(text)
         
         # Save to database
-        db.save_profile(text, structured_data, embedding)
+        db.save_profile(user_id, text, structured_data, embedding)
         
-        return {"status": "success", "message": "Resume uploaded and analyzed successfully"}
+        # Schedule backfill evaluation for existing database jobs
+        background_tasks.add_task(evaluate_existing_jobs, user_id)
+        
+        return {"status": "success", "message": "Resume uploaded successfully. Instant match evaluation started in background!"}
     except Exception as e:
         logger.error(f"Upload error: {e}")
         return {"status": "error", "message": str(e)}
 
 @app.post("/api/resume/paste")
-async def paste_resume(req: PasteResume):
+async def paste_resume(req: PasteResume, background_tasks: BackgroundTasks, request: Request):
     try:
+        user_id = get_user_id(request)
         text = req.text
         if not text or not text.strip():
             return {"status": "error", "message": "Empty resume text provided"}
             
         # Run parsing & embeddings
         analyzer = GeminiAnalyzer()
-        logger.info("Extracting structured details from pasted resume...")
+        logger.info(f"Extracting structured details from pasted resume for user {user_id}...")
         structured_data = analyzer.extract_resume_parameters(text)
         
-        logger.info("Generating semantic embeddings for the resume...")
+        logger.info(f"Generating semantic embeddings for pasted resume of user {user_id}...")
         embedding = analyzer.get_embedding(text)
         
         # Save to database
-        db.save_profile(text, structured_data, embedding)
+        db.save_profile(user_id, text, structured_data, embedding)
         
-        return {"status": "success", "message": "Resume text processed and analyzed successfully"}
+        # Schedule backfill evaluation for existing database jobs
+        background_tasks.add_task(evaluate_existing_jobs, user_id)
+        
+        return {"status": "success", "message": "Resume text processed successfully. Instant match evaluation started in background!"}
     except Exception as e:
         logger.error(f"Paste error: {e}")
         return {"status": "error", "message": str(e)}
 
 @app.delete("/api/resume")
-async def delete_resume():
+async def delete_resume(request: Request):
     try:
-        db.delete_profile()
+        user_id = get_user_id(request)
+        db.delete_profile(user_id)
         return {"status": "success", "message": "Resume profile removed successfully"}
     except Exception as e:
         logger.error(f"Delete profile error: {e}")
         return {"status": "error", "message": str(e)}
 
 @app.get("/api/market-insights")
-async def get_market_insights():
-    jobs = db.get_recent_jobs(limit=30)
+async def get_market_insights(request: Request):
+    user_id = get_user_id(request)
+    jobs = db.get_recent_jobs(user_id=user_id, limit=200) # Fetch up to 200 jobs for robust statistical insights
     analyzer = GeminiAnalyzer()
     return analyzer.generate_market_insights(jobs)
 
 @app.get("/api/up-skill")
-async def get_upskill_recommendations():
-    profile = db.get_profile()
+async def get_upskill_recommendations(request: Request):
+    user_id = get_user_id(request)
+    profile = db.get_profile(user_id)
     if not profile:
         return []
     
     # Gather distinct missing skills from match logs
-    jobs = db.get_recent_jobs(limit=30)
+    jobs = db.get_recent_jobs(user_id=user_id, limit=50)
     missing_set = set()
     for j in jobs:
         for s in j.get("missingSkills", []):
@@ -215,18 +307,20 @@ async def get_upskill_recommendations():
     return analyzer.generate_learning_recommendations(missing_list)
 
 @app.get("/api/resume-suggestions")
-async def get_resume_suggestions():
-    profile = db.get_profile()
+async def get_resume_suggestions(request: Request):
+    user_id = get_user_id(request)
+    profile = db.get_profile(user_id)
     if not profile:
         return None
-    jobs = db.get_recent_jobs(limit=15)
+    jobs = db.get_recent_jobs(user_id=user_id, limit=15)
     analyzer = GeminiAnalyzer()
     return analyzer.generate_resume_suggestions(profile, jobs)
 
 @app.get("/api/analytics")
-async def get_analytics():
-    jobs = db.get_recent_jobs(limit=100)
-    profile = db.get_profile()
+async def get_analytics(request: Request):
+    user_id = get_user_id(request)
+    jobs = db.get_recent_jobs(user_id=user_id, limit=100)
+    profile = db.get_profile(user_id)
     
     total_jobs = len(jobs)
     matched_jobs = len([j for j in jobs if j.get("matchScore", 0) >= 80])
@@ -242,7 +336,6 @@ async def get_analytics():
     profile_strength = 0
     if profile:
         sd = profile.get("structured_data", {})
-        # Simple heuristics for profile strength and resume score
         yoe = sd.get("yoe", 0)
         skills = len(sd.get("skills", []))
         projects = len(sd.get("projects", []))
@@ -263,7 +356,7 @@ async def get_analytics():
         "successRate": success_rate,
         "resumeScore": resume_score,
         "profileStrength": profile_strength,
-        "marketDemandScore": 82 if total_jobs > 0 else 0
+        "marketDemandScore": min(100, 60 + total_jobs) if total_jobs > 0 else 0
     }
 
 if __name__ == "__main__":
