@@ -38,6 +38,24 @@ class Database:
             logger.error(f"Failed to connect to SQLite: {e}")
 
     def _create_table(self):
+        # Upgrade schema if needed
+        try:
+            cur = self.conn.cursor()
+            if self.is_sqlite:
+                cur.execute("PRAGMA table_info(processed_jobs)")
+                cols = [c[1] for c in cur.fetchall()]
+                if cols and "source" not in cols:
+                    cur.execute("DROP TABLE processed_jobs")
+            else:
+                cur.execute("SELECT column_name FROM information_schema.columns WHERE table_name='processed_jobs'")
+                cols = [c[0] for c in cur.fetchall()]
+                if cols and "source" not in cols:
+                    cur.execute("DROP TABLE processed_jobs CASCADE")
+            self.conn.commit()
+            cur.close()
+        except Exception as e:
+            logger.warning(f"Error checking/migrating schema: {e}")
+
         queries = [
             """
             CREATE TABLE IF NOT EXISTS processed_jobs (
@@ -46,7 +64,11 @@ class Database:
                 title TEXT,
                 company TEXT,
                 url TEXT,
-                ats_score INTEGER,
+                source VARCHAR(100),
+                location TEXT,
+                description TEXT,
+                skills TEXT,
+                summary TEXT,
                 processed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 status VARCHAR(50)
             )
@@ -115,18 +137,22 @@ class Database:
     def add_job(self, job_data: dict):
         try:
             query = """
-                INSERT INTO processed_jobs (job_id, title, company, url, ats_score, status)
-                VALUES (?, ?, ?, ?, ?, ?)
+                INSERT INTO processed_jobs (job_id, title, company, url, source, location, description, skills, summary, status)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """ if self.is_sqlite else """
-                INSERT INTO processed_jobs (job_id, title, company, url, ats_score, status)
-                VALUES (%s, %s, %s, %s, %s, %s)
+                INSERT INTO processed_jobs (job_id, title, company, url, source, location, description, skills, summary, status)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             """
             params = (
                 job_data['job_id'],
                 job_data['title'],
                 job_data['company'],
                 job_data['url'],
-                job_data.get('ats_score'),
+                job_data.get('source', 'Unknown'),
+                job_data.get('location', ''),
+                job_data.get('description', ''),
+                job_data.get('skills', ''),
+                job_data.get('summary', ''),
                 job_data.get('status', 'processed')
             )
             cur = self.conn.cursor()
@@ -139,7 +165,7 @@ class Database:
                 self.conn.rollback()
 
     def get_recent_jobs(self, limit=50):
-        query = f"SELECT job_id, title, company, url, ats_score, processed_at, status FROM processed_jobs ORDER BY processed_at DESC LIMIT {limit}"
+        query = f"SELECT job_id, title, company, url, source, location, description, skills, summary, processed_at, status FROM processed_jobs ORDER BY processed_at DESC LIMIT {limit}"
         try:
             cur = self.conn.cursor()
             cur.execute(query)
@@ -153,9 +179,13 @@ class Database:
                     "title": row[1],
                     "company": row[2],
                     "url": row[3],
-                    "ats_score": row[4],
-                    "processed_at": row[5],
-                    "status": row[6]
+                    "source": row[4],
+                    "location": row[5],
+                    "description": row[6],
+                    "skills": row[7],
+                    "summary": row[8],
+                    "processed_at": row[9].strftime('%Y-%m-%d %H:%M:%S') if hasattr(row[9], 'strftime') else str(row[9]),
+                    "status": row[10]
                 })
             return jobs
         except Exception as e:

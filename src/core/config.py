@@ -25,8 +25,8 @@ class Config(BaseModel):
     JOB_KEYWORDS: str = os.getenv("JOB_KEYWORDS", "Software Engineer")
     JOB_LOCATIONS: str = os.getenv("JOB_LOCATIONS", "Remote")
     
-    MASTER_RESUME_PATH: str = os.getenv("MASTER_RESUME_PATH", "master_resume.md")
     OUTPUT_DIR: str = os.getenv("OUTPUT_DIR", "output_resumes")
+    SCRAPE_HEADLESS: bool = os.getenv("SCRAPE_HEADLESS", "False").lower() in ("true", "1", "t")
 
 config = Config()
 
