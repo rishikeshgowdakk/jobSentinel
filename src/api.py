@@ -126,17 +126,15 @@ async def upload_resume(file: UploadFile = File(...)):
         if filename.endswith(('.txt', '.md')):
             text = content.decode('utf-8', errors='ignore')
         else:
-            temp_pdf = "temp_resume.pdf"
-            with open(temp_pdf, "wb") as f:
-                f.write(content)
-                
-            doc = fitz.open(temp_pdf)
-            text = ""
-            for page in doc:
-                text += page.get_text()
-            doc.close()
-            if os.path.exists(temp_pdf):
-                os.remove(temp_pdf)
+            try:
+                doc = fitz.open(stream=content, filetype="pdf")
+                text = ""
+                for page in doc:
+                    text += page.get_text()
+                doc.close()
+            except Exception as pdf_e:
+                logger.error(f"PyMuPDF stream error: {pdf_e}")
+                return {"status": "error", "message": "Failed to parse PDF file"}
 
         if not text.strip():
             return {"status": "error", "message": "Could not extract text from file"}
@@ -178,6 +176,15 @@ async def paste_resume(req: PasteResume):
         return {"status": "success", "message": "Resume text processed and analyzed successfully"}
     except Exception as e:
         logger.error(f"Paste error: {e}")
+        return {"status": "error", "message": str(e)}
+
+@app.delete("/api/resume")
+async def delete_resume():
+    try:
+        db.delete_profile()
+        return {"status": "success", "message": "Resume profile removed successfully"}
+    except Exception as e:
+        logger.error(f"Delete profile error: {e}")
         return {"status": "error", "message": str(e)}
 
 @app.get("/api/market-insights")

@@ -37,31 +37,122 @@ class GeminiAnalyzer:
 
     def extract_resume_parameters(self, resume_text: str) -> dict:
         if not self.client:
-            logger.warning("Gemini Client not initialized for resume extraction. Using defaults.")
+            logger.warning("Gemini Client not initialized for resume extraction. Using local rule-based fallback parser.")
+            
+            import re
+            lines = [line.strip() for line in resume_text.split('\n') if line.strip()]
+            
+            name = "Candidate Profile"
+            for line in lines[:4]:
+                if "@" not in line and not any(char.isdigit() for char in line) and len(line.split()) <= 4:
+                    name = line
+                    break
+                    
+            email_match = re.search(r'[\w\.-]+@[\w\.-]+\.\w+', resume_text)
+            email = email_match.group(0) if email_match else ""
+            
+            phone_match = re.search(r'\(?\+?[0-9]{1,4}\)?[-\s\./0-9]{7,15}', resume_text)
+            phone = phone_match.group(0).strip() if phone_match else ""
+            
+            location = "Remote"
+            loc_match = re.search(r'([A-Z][a-zA-Z\s]+,\s*[A-Z]{2,3}|[A-Z][a-zA-Z\s]+,\s*[A-Z][a-zA-Z\s]+)', resume_text)
+            if loc_match:
+                location = loc_match.group(0).strip()
+            
+            yoe = 0
+            yoe_match = re.search(r'(\d+)\+?\s*(?:years?|yrs?)\s*(?:of)?\s*(?:experience|exp)', resume_text, re.IGNORECASE)
+            if yoe_match:
+                yoe = int(yoe_match.group(1))
+            else:
+                exp_words = re.findall(r'(\d+)\s*(?:years?|yrs?)', resume_text, re.IGNORECASE)
+                if exp_words:
+                    try:
+                        yoe = max(int(w) for w in exp_words if int(w) < 30)
+                    except ValueError:
+                        pass
+
+            tech_dictionary = {
+                "skills": ["python", "fastapi", "react", "docker", "postgresql", "kubernetes", "golang", "typescript", "javascript", "aws", "terraform", "django", "flask", "node.js", "express", "sql", "redis", "mongodb", "mysql", "java", "spring boot", "git", "ci/cd", "html", "css", "vue", "angular", "next.js", "c++", "c#"],
+                "frameworks": ["react", "fastapi", "express", "django", "flask", "spring boot", "vue", "angular", "next.js", "laravel", "rails"],
+                "languages": ["python", "javascript", "typescript", "golang", "java", "c++", "c#", "ruby", "php", "rust", "sql", "html", "css"],
+                "cloud_platforms": ["aws", "gcp", "azure", "heroku", "digitalocean", "cloudflare"],
+                "devops_tools": ["docker", "kubernetes", "terraform", "jenkins", "ansible", "github actions", "gitlab ci", "prometheus", "grafana"],
+                "databases": ["postgresql", "redis", "mongodb", "mysql", "sqlite", "cassandra", "dynamodb", "elasticsearch"],
+                "aiml_skills": ["tensorflow", "pytorch", "scikit-learn", "keras", "pandas", "numpy", "opencv", "nlp", "llm"]
+            }
+
+            extracted = {k: [] for k in tech_dictionary.keys()}
+            resume_lower = resume_text.lower()
+            
+            for category, keywords in tech_dictionary.items():
+                for kw in keywords:
+                    pattern = r'\b' + re.escape(kw) + r'\b'
+                    if re.search(pattern, resume_lower):
+                        formatted = kw.upper() if kw in ["aws", "gcp", "sql", "html", "css", "nlp", "llm", "api"] else kw.capitalize()
+                        if kw == "node.js": formatted = "Node.js"
+                        if kw == "next.js": formatted = "Next.js"
+                        if kw == "spring boot": formatted = "Spring Boot"
+                        if kw == "github actions": formatted = "GitHub Actions"
+                        if kw == "gitlab ci": formatted = "GitLab CI"
+                        if kw == "scikit-learn": formatted = "Scikit-Learn"
+                        extracted[category].append(formatted)
+
+            all_skills = list(set(
+                extracted["skills"] + 
+                extracted["frameworks"] + 
+                extracted["languages"] + 
+                extracted["cloud_platforms"] + 
+                extracted["devops_tools"] + 
+                extracted["databases"] + 
+                extracted["aiml_skills"]
+            ))
+            if not all_skills:
+                all_skills = ["Developer"]
+
+            projects = []
+            education = []
+            
+            project_keywords = ["project", "portfolio", "application", "system", "app"]
+            edu_keywords = ["bs", "ms", "phd", "bachelor", "master", "degree", "university", "college", "institute", "school"]
+            
+            for line in lines:
+                line_lower = line.lower()
+                if any(kw in line_lower for kw in project_keywords) and len(line) > 10 and len(line) < 100:
+                    projects.append(line)
+                if any(kw in line_lower for kw in edu_keywords) and len(line) > 10 and len(line) < 100:
+                    education.append(line)
+
+            projects = list(dict.fromkeys(projects))[:4]
+            education = list(dict.fromkeys(education))[:3]
+
+            seniority = "Entry Level"
+            if yoe >= 5: seniority = "Senior Level"
+            elif yoe >= 3: seniority = "Mid Level"
+
             return {
-                "name": "Candidate Profile",
-                "email": "candidate@example.com",
-                "phone": "+1-234-567-8900",
-                "location": "San Francisco, CA",
-                "yoe": 2,
-                "current_role": "Software Engineer",
-                "previous_roles": ["Junior Developer"],
-                "skills": ["Python", "FastAPI", "React", "Docker", "PostgreSQL"],
-                "frameworks": ["React", "FastAPI", "Express"],
-                "languages": ["Python", "JavaScript", "SQL"],
-                "cloud_platforms": ["AWS"],
-                "devops_tools": ["Docker", "GitHub Actions"],
-                "aiml_skills": ["Scikit-Learn"],
-                "databases": ["PostgreSQL", "Redis"],
-                "projects": ["Job Aggregator App", "Portfolio Website"],
-                "education": ["BS in Computer Science"],
-                "certifications": ["AWS Cloud Practitioner"],
-                "preferred_locations": ["Remote", "San Francisco"],
-                "work_authorization": "Authorized to work in US",
-                "remote_preference": "Remote",
-                "internship_or_fulltime": "Full-Time",
+                "name": name,
+                "email": email or "candidate@example.com",
+                "phone": phone or "+1-234-567-8900",
+                "location": location,
+                "yoe": yoe,
+                "current_role": name if name != "Candidate Profile" else "Software Engineer",
+                "previous_roles": [],
+                "skills": all_skills,
+                "frameworks": extracted["frameworks"],
+                "languages": extracted["languages"],
+                "cloud_platforms": extracted["cloud_platforms"],
+                "devops_tools": extracted["devops_tools"],
+                "aiml_skills": extracted["aiml_skills"],
+                "databases": extracted["databases"],
+                "projects": projects if projects else ["Personal Projects"],
+                "education": education if education else ["Self-taught Developer"],
+                "certifications": [],
+                "preferred_locations": [location] if location != "Remote" else ["Remote"],
+                "work_authorization": "Authorized to work in US" if "authorized" in resume_lower or "citizen" in resume_lower or "green card" in resume_lower else "Not Specified",
+                "remote_preference": "Remote" if "remote" in resume_lower or "work from home" in resume_lower else "Onsite",
+                "internship_or_fulltime": "Full-Time" if "fulltime" in resume_lower or "full-time" in resume_lower or "permanent" in resume_lower else "Contract",
                 "expected_graduation": "",
-                "seniority_level": "Mid Level"
+                "seniority_level": seniority
             }
         
         prompt = f"""

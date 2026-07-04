@@ -435,4 +435,16 @@ class Database:
             logger.error(f"Error fetching applications: {e}")
             return []
 
+    def delete_profile(self):
+        try:
+            cur = self.conn.cursor()
+            cur.execute("DELETE FROM resume_profile")
+            self.conn.commit()
+            cur.close()
+            logger.info("Resume profile deleted successfully.")
+        except Exception as e:
+            logger.error(f"Error deleting resume profile: {e}")
+            if self.conn:
+                self.conn.rollback()
+
 db = Database()

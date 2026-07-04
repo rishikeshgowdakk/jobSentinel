@@ -35,6 +35,7 @@ class JobScraper:
         search_locations = locations if locations else self.locations
         
         async with async_playwright() as p:
+            browser = None
             try:
                 browser, page = await self._get_browser(p)
                 for keyword in search_keywords:
@@ -78,12 +79,14 @@ class JobScraper:
                                         
                                         if link:
                                             jd_context = await browser.new_context()
-                                            jd_p = await jd_context.new_page()
-                                            await stealth_async(jd_p)
-                                            await jd_p.goto(link, wait_until='load', timeout=60000)
-                                            jd_elem = await jd_p.query_selector(".description__text")
-                                            jd_text = await jd_elem.inner_text() if jd_elem else ""
-                                            await jd_context.close()
+                                            try:
+                                                jd_p = await jd_context.new_page()
+                                                await stealth_async(jd_p)
+                                                await jd_p.goto(link, wait_until='load', timeout=60000)
+                                                jd_elem = await jd_p.query_selector(".description__text")
+                                                jd_text = await jd_elem.inner_text() if jd_elem else ""
+                                            finally:
+                                                await jd_context.close()
 
                                             remote_status = "Remote" if "remote" in loc_text.lower() or "work from home" in jd_text.lower() else "Onsite"
                                             
@@ -108,9 +111,14 @@ class JobScraper:
                                 except Exception: continue
                         except Exception as e:
                             logger.error(f"LinkedIn error for {keyword}: {e}")
-                await browser.close()
             except Exception as outer_e:
                 logger.error(f"LinkedIn browser launch failed: {outer_e}")
+            finally:
+                if browser:
+                    try:
+                        await browser.close()
+                    except Exception:
+                        pass
         return jobs
 
     async def scrape_naukri(self, keywords=None, locations=None, job_type="All", experience_level="All"):
@@ -119,6 +127,7 @@ class JobScraper:
         search_locations = locations if locations else self.locations
         
         async with async_playwright() as p:
+            browser = None
             try:
                 browser, page = await self._get_browser(p)
                 for keyword in search_keywords:
@@ -166,6 +175,8 @@ class JobScraper:
                                     sal_elem = await card.query_selector(".sal-wrap")
                                     if not sal_elem:
                                         sal_elem = await card.query_selector(".salary")
+                                    if not sal_elem:
+                                        sal_elem = await card.query_selector(".salwdth")
                                     sal_text = await sal_elem.inner_text() if sal_elem else "Not disclosed"
                                     
                                     # Skills
@@ -203,9 +214,14 @@ class JobScraper:
                                     continue
                         except Exception as e:
                             logger.error(f"Naukri scraping page error: {e}")
-                await browser.close()
             except Exception as outer_e:
                 logger.error(f"Naukri browser launch failed: {outer_e}")
+            finally:
+                if browser:
+                    try:
+                        await browser.close()
+                    except Exception:
+                        pass
         return jobs
 
     def generate_mock_jobs(self, keywords=None) -> list:

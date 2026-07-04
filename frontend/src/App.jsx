@@ -162,7 +162,11 @@ function App() {
     formData.append('file', file);
     
     try {
-      const response = await axios.post(`${API_BASE}/resume/upload`, formData);
+      const response = await axios.post(`${API_BASE}/resume/upload`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      });
       if (response.data.status === 'success') {
         setMessage(response.data.message);
         loadAllData(); // Reload parsed values
@@ -171,10 +175,12 @@ function App() {
         setIsError(true);
       }
     } catch (error) {
-      setMessage('Failed to connect to API server.');
+      console.error('Upload error details:', error);
+      setMessage('Failed to upload resume.');
       setIsError(true);
     }
     setUploading(false);
+    e.target.value = ''; // Reset input to allow selecting same file again
     setTimeout(() => setMessage(''), 5000);
   };
 
@@ -199,6 +205,26 @@ function App() {
       setIsError(true);
     }
     setPasting(false);
+    setTimeout(() => setMessage(''), 5000);
+  };
+
+  const handleDeleteResume = async () => {
+    if (!window.confirm("Are you sure you want to delete your parsed resume profile? This cannot be undone.")) return;
+    setMessage('Removing resume...');
+    setIsError(false);
+    try {
+      const response = await axios.delete(`${API_BASE}/resume`);
+      if (response.data.status === 'success') {
+        setMessage(response.data.message);
+        loadAllData(); // Reload parsed values (will clear the profile)
+      } else {
+        setMessage(response.data.message);
+        setIsError(true);
+      }
+    } catch (error) {
+      setMessage('Failed to delete resume profile.');
+      setIsError(true);
+    }
     setTimeout(() => setMessage(''), 5000);
   };
 
@@ -900,6 +926,13 @@ function App() {
                     <div className="flex justify-between text-slate-400">
                       <span>Work Visa status:</span> <span className="font-bold text-white text-right">{profile.work_authorization || "Not Specified"}</span>
                     </div>
+
+                    <button 
+                      onClick={handleDeleteResume}
+                      className="w-full text-center py-2.5 bg-red-950/40 border border-red-900/50 hover:bg-red-900/20 text-red-400 font-bold text-[9px] uppercase tracking-widest transition-all mt-6"
+                    >
+                      Remove Resume
+                    </button>
                   </div>
                 </div>
 
