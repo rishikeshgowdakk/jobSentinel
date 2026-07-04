@@ -23,6 +23,9 @@ class Preferences(BaseModel):
 class JobStatusUpdate(BaseModel):
     status: str
 
+class PasteResume(BaseModel):
+    text: str
+
 # Connection Manager for WebSockets
 class ConnectionManager:
     def __init__(self):
@@ -112,27 +115,31 @@ async def update_preferences(prefs: Preferences):
 @app.post("/api/resume/upload")
 async def upload_resume(file: UploadFile = File(...)):
     try:
-        if not file.filename.lower().endswith('.pdf'):
-            return {"status": "error", "message": "Only PDF files are supported"}
+        filename = file.filename.lower()
+        if not filename.endswith(('.pdf', '.txt', '.md')):
+            return {"status": "error", "message": "Only PDF, TXT, and MD files are supported"}
 
         content = await file.read()
         if not content:
             return {"status": "error", "message": "Empty file uploaded"}
         
-        temp_pdf = "temp_resume.pdf"
-        with open(temp_pdf, "wb") as f:
-            f.write(content)
-            
-        doc = fitz.open(temp_pdf)
-        text = ""
-        for page in doc:
-            text += page.get_text()
-        doc.close()
-        if os.path.exists(temp_pdf):
-            os.remove(temp_pdf)
+        if filename.endswith(('.txt', '.md')):
+            text = content.decode('utf-8', errors='ignore')
+        else:
+            temp_pdf = "temp_resume.pdf"
+            with open(temp_pdf, "wb") as f:
+                f.write(content)
+                
+            doc = fitz.open(temp_pdf)
+            text = ""
+            for page in doc:
+                text += page.get_text()
+            doc.close()
+            if os.path.exists(temp_pdf):
+                os.remove(temp_pdf)
 
         if not text.strip():
-            return {"status": "error", "message": "Could not extract text from PDF"}
+            return {"status": "error", "message": "Could not extract text from file"}
 
         # Run parsing & embeddings
         analyzer = GeminiAnalyzer()
@@ -148,6 +155,29 @@ async def upload_resume(file: UploadFile = File(...)):
         return {"status": "success", "message": "Resume uploaded and analyzed successfully"}
     except Exception as e:
         logger.error(f"Upload error: {e}")
+        return {"status": "error", "message": str(e)}
+
+@app.post("/api/resume/paste")
+async def paste_resume(req: PasteResume):
+    try:
+        text = req.text
+        if not text or not text.strip():
+            return {"status": "error", "message": "Empty resume text provided"}
+            
+        # Run parsing & embeddings
+        analyzer = GeminiAnalyzer()
+        logger.info("Extracting structured details from pasted resume...")
+        structured_data = analyzer.extract_resume_parameters(text)
+        
+        logger.info("Generating semantic embeddings for the resume...")
+        embedding = analyzer.get_embedding(text)
+        
+        # Save to database
+        db.save_profile(text, structured_data, embedding)
+        
+        return {"status": "success", "message": "Resume text processed and analyzed successfully"}
+    except Exception as e:
+        logger.error(f"Paste error: {e}")
         return {"status": "error", "message": str(e)}
 
 @app.get("/api/market-insights")

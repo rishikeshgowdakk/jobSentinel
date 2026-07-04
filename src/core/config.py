@@ -26,7 +26,7 @@ class Config(BaseModel):
     JOB_LOCATIONS: str = os.getenv("JOB_LOCATIONS", "Remote")
     
     OUTPUT_DIR: str = os.getenv("OUTPUT_DIR", "output_resumes")
-    SCRAPE_HEADLESS: bool = os.getenv("SCRAPE_HEADLESS", "False").lower() in ("true", "1", "t")
+    SCRAPE_HEADLESS: bool = os.getenv("SCRAPE_HEADLESS", "True").lower() in ("true", "1", "t")
 
 config = Config()
 

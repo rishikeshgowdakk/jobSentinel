@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { 
-  Activity, RefreshCw, Settings, Terminal, Briefcase, ShieldAlert, 
-  Upload, BookOpen, Sparkles, LineChart, CheckCircle, XCircle, 
-  Bookmark, ChevronRight, TrendingUp, FolderGit2, Award, Clock, 
-  User, Check, AlertCircle, HelpCircle, Phone, Mail, MapPin
+  Activity, RefreshCw, Settings, Terminal, Briefcase, 
+  Upload, BookOpen, Sparkles, LineChart, CheckCircle,
+  Bookmark, ChevronRight, TrendingUp, Award, Clock, 
+  User, Check, Phone, Mail, MapPin, AlertCircle
 } from 'lucide-react';
 
 const API_BASE = 'http://localhost:8000/api';
@@ -41,6 +41,11 @@ function App() {
   // WebSocket console logs
   const [logs, setLogs] = useState([]);
   const logEndRef = useRef(null);
+
+  // Modal and paste state
+  const [showPasteModal, setShowPasteModal] = useState(false);
+  const [pastedResumeText, setPastedResumeText] = useState('');
+  const [pasting, setPasting] = useState(false);
 
   // Filters for job feed
   const [filterKeyword, setFilterKeyword] = useState('');
@@ -136,7 +141,7 @@ function App() {
         setLogs(prev => [...prev.slice(-49), data.message]);
       } else if (data.type === 'new_job') {
         setJobs(prev => [data.data, ...prev]);
-        fetchAnalytics(); // Refresh counters on new findings
+        fetchAnalytics(); // Refresh counters
       }
     };
     return () => ws.close();
@@ -150,7 +155,7 @@ function App() {
     const file = e.target.files[0];
     if (!file) return;
     setUploading(true);
-    setMessage('Uploading and analyzing resume PDF...');
+    setMessage('Uploading and analyzing resume...');
     setIsError(false);
     
     const formData = new FormData();
@@ -170,6 +175,30 @@ function App() {
       setIsError(true);
     }
     setUploading(false);
+    setTimeout(() => setMessage(''), 5000);
+  };
+
+  const handleResumePaste = async () => {
+    if (!pastedResumeText.trim()) return;
+    setPasting(true);
+    setMessage('Analyzing pasted resume...');
+    setIsError(false);
+    try {
+      const response = await axios.post(`${API_BASE}/resume/paste`, { text: pastedResumeText });
+      if (response.data.status === 'success') {
+        setMessage(response.data.message);
+        setPastedResumeText('');
+        setShowPasteModal(false);
+        loadAllData(); // Reload parsed values
+      } else {
+        setMessage(response.data.message);
+        setIsError(true);
+      }
+    } catch (error) {
+      setMessage('Failed to connect to API server.');
+      setIsError(true);
+    }
+    setPasting(false);
     setTimeout(() => setMessage(''), 5000);
   };
 
@@ -200,7 +229,6 @@ function App() {
     }
   };
 
-  // Filtering job listings locally
   const filteredJobs = jobs.filter(job => {
     const matchesKeyword = !filterKeyword || 
       job.title.toLowerCase().includes(filterKeyword.toLowerCase()) || 
@@ -219,660 +247,788 @@ function App() {
   });
 
   return (
-    <div className="min-h-screen bg-black text-slate-300 font-sans selection:bg-blue-500/30 overflow-x-hidden">
-      {/* Header bar */}
-      <header className="bg-slate-900/40 border-b border-white/5 backdrop-blur-xl sticky top-0 z-50">
-        <div className="max-w-[1600px] mx-auto px-8 py-5 flex justify-between items-center">
-          <div className="flex items-center gap-4">
-            <div className="bg-blue-600 p-2.5 rounded-2xl shadow-lg shadow-blue-500/20">
-              <Activity className="text-white animate-pulse" size={24} />
-            </div>
-            <div>
-              <h1 className="text-xl font-black tracking-tight text-white uppercase italic">JobSentinel <span className="text-blue-500 not-italic font-normal">Agent</span></h1>
-              <div className="flex items-center gap-2">
-                <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-ping" />
-                <span className="text-[10px] text-slate-500 font-black uppercase tracking-[0.2em]">Active scanning</span>
-              </div>
+    <div className="min-h-screen text-slate-100 flex flex-col lg:flex-row antialiased select-none font-sans">
+      
+      {/* LEFT COLUMN: Sidebar Navigation & Identity (Sleek minimalist 00 format) */}
+      <aside className="w-full lg:w-[400px] border-r border-carbon bg-black/70 p-10 flex flex-col justify-between shrink-0 relative z-10">
+        <div className="space-y-12">
+          {/* Logo / Concept Name */}
+          <div className="space-y-1">
+            <h1 className="text-2xl font-bold tracking-[0.15em] text-white uppercase font-sans">
+              JobSentinel
+            </h1>
+            <p className="text-[10px] font-medium tracking-[0.3em] uppercase text-carbon-muted">
+              Autonomous Intelligence Agent
+            </p>
+          </div>
+
+          {/* Blink scanner status */}
+          <div className="flex items-center gap-3 bg-white/[0.02] border border-white/5 py-3 px-5 rounded-none">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+            </span>
+            <span className="text-[9px] font-bold tracking-[0.2em] uppercase text-slate-400">
+              Active Scanning Loop
+            </span>
+          </div>
+
+          {/* Minimalist Tab Navigation matching "01." concept layout */}
+          <nav className="flex flex-col gap-6">
+            {[
+              { id: 'dashboard', num: '00', label: 'Overview' },
+              { id: 'jobs', num: '01', label: 'Discoveries' },
+              { id: 'upskill', num: '02', label: 'Skills Path' },
+              { id: 'critique', num: '03', label: 'ATS Optimize' },
+              { id: 'profile', num: '04', label: 'Profile' }
+            ].map(tab => (
+              <button 
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className="flex items-center text-left group outline-none"
+              >
+                <span className={`text-[10px] font-bold font-mono tracking-widest mr-4 transition-all duration-300 ${
+                  activeTab === tab.id ? 'text-white' : 'text-carbon-muted group-hover:text-slate-300'
+                }`}>
+                  {tab.num}.
+                </span>
+                <span className={`text-xs font-bold uppercase tracking-[0.25em] transition-all duration-300 ${
+                  activeTab === tab.id ? 'text-white border-b border-white pb-1' : 'text-slate-500 group-hover:text-white'
+                }`}>
+                  {tab.label}
+                </span>
+              </button>
+            ))}
+          </nav>
+        </div>
+
+        {/* Brand/User Details Card at bottom */}
+        <div className="space-y-6 pt-10">
+          <div className="thin-accent-line" />
+          <div className="space-y-2 text-xs">
+            <div className="text-[9px] uppercase tracking-widest text-carbon-muted font-bold">Active Candidate</div>
+            <div className="font-bold text-white tracking-wide">{profile?.name || 'Guest User'}</div>
+            <div className="text-[10px] text-slate-500 leading-relaxed font-light">
+              {profile?.current_role || 'No active profile loaded. Upload your resume to start semantic scoring.'}
             </div>
           </div>
+
+          {/* Quick upload options */}
+          <div className="flex gap-2.5">
+            <input type="file" id="resume-upload" className="hidden" accept=".pdf,.txt,.md" onChange={handleFileUpload} disabled={uploading} />
+            <label htmlFor="resume-upload" className="flex-1 text-center py-3 bg-white text-black font-bold text-[9px] uppercase tracking-widest cursor-pointer hover:bg-slate-200 transition-all">
+              {uploading ? 'Processing...' : 'Upload Resume'}
+            </label>
+            <button 
+              onClick={() => setShowPasteModal(true)} 
+              className="flex-1 text-center py-3 bg-zinc-900 border border-zinc-800 text-white font-bold text-[9px] uppercase tracking-widest hover:bg-zinc-800 transition-all"
+            >
+              Paste Resume
+            </button>
+            <button 
+              onClick={loadAllData} 
+              className="p-3 bg-zinc-900 border border-zinc-800 text-slate-400 hover:text-white transition-all"
+            >
+              <RefreshCw size={12} className={loading ? 'animate-spin' : ''} />
+            </button>
+          </div>
           
-          {/* Global message banner */}
+          {/* Global Message Banner */}
           {message && (
-            <div className={`px-4 py-2 rounded-xl text-xs font-bold border transition-all ${
-              isError ? 'bg-red-500/10 border-red-500/20 text-red-400' : 'bg-blue-500/10 border-blue-500/20 text-blue-400'
+            <div className={`p-3 text-[10px] uppercase font-bold tracking-wider text-center ${
+              isError ? 'bg-red-950/40 border border-red-900/50 text-red-400' : 'bg-zinc-900 border border-zinc-800 text-slate-300'
             }`}>
               {message}
             </div>
           )}
-
-          <div className="flex items-center gap-4">
-            {/* Quick action: Resume upload */}
-            <input type="file" id="resume-upload" className="hidden" accept=".pdf" onChange={handleFileUpload} disabled={uploading} />
-            <label htmlFor="resume-upload" className="px-5 py-2.5 rounded-xl font-black text-[11px] uppercase tracking-widest cursor-pointer bg-blue-600 hover:bg-blue-500 text-white shadow-xl shadow-blue-600/10 transition-all">
-              {uploading ? 'Processing PDF...' : 'Upload Resume'}
-            </label>
-            <button onClick={loadAllData} className="p-2.5 rounded-xl bg-white/5 border border-white/10 hover:border-blue-500 text-slate-400 hover:text-white transition-all">
-              <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
-            </button>
-          </div>
         </div>
-      </header>
+      </aside>
 
-      {/* Tabs navigation */}
-      <nav className="bg-slate-900/20 border-b border-white/5 backdrop-blur-md sticky top-[77px] z-40">
-        <div className="max-w-[1600px] mx-auto px-8 py-2.5 flex gap-8">
-          {[
-            { id: 'dashboard', label: 'Overview', icon: TrendingUp },
-            { id: 'jobs', label: 'Job Discoveries', icon: Briefcase },
-            { id: 'upskill', label: 'Skills Pathing', icon: BookOpen },
-            { id: 'critique', label: 'Resume Critique', icon: Sparkles },
-            { id: 'profile', label: 'Recruiter Profile', icon: User }
-          ].map(tab => {
-            const Icon = tab.icon;
-            return (
-              <button 
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-2 py-2 px-4 rounded-xl font-bold text-xs uppercase tracking-wider transition-all ${
-                  activeTab === tab.id 
-                    ? 'bg-blue-600 text-white' 
-                    : 'text-slate-400 hover:text-white hover:bg-white/5'
-                }`}
-              >
-                <Icon size={14} />
-                {tab.label}
-              </button>
-            )
-          })}
-        </div>
-      </nav>
-
-      {/* Main interface layout */}
-      <main className="max-w-[1600px] mx-auto px-8 py-8">
+      {/* RIGHT COLUMN: Tab Panel Contents */}
+      <main className="flex-grow p-10 lg:p-14 overflow-y-auto max-h-screen relative z-10">
         
-        {/* Tab 1: Dashboard / Overview */}
+        {/* Tab 00: Overview / Dashboard */}
         {activeTab === 'dashboard' && (
-          <div className="space-y-8">
-            {/* Top Metrics Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              <div className="bg-slate-900/50 border border-white/5 rounded-3xl p-6 relative overflow-hidden">
-                <div className="flex justify-between items-center mb-4">
-                  <span className="text-[10px] font-black uppercase text-slate-500 tracking-wider">Profile Strength</span>
-                  <Award className="text-blue-500" size={18} />
-                </div>
-                <div className="text-3xl font-black text-white">{analytics.profileStrength}%</div>
-                <div className="w-full bg-white/5 h-1.5 rounded-full overflow-hidden mt-3">
-                  <div className="bg-blue-500 h-full transition-all" style={{ width: `${analytics.profileStrength}%` }} />
-                </div>
+          <div className="space-y-12">
+            
+            {/* Top Concept Header */}
+            <div className="flex justify-between items-end border-b border-carbon pb-8">
+              <div>
+                <span className="text-[10px] font-bold font-mono tracking-widest text-carbon-muted uppercase block mb-1">00. Overview</span>
+                <h2 className="text-xl font-bold uppercase tracking-[0.2em] text-white">System Telemetry</h2>
               </div>
-              <div className="bg-slate-900/50 border border-white/5 rounded-3xl p-6">
-                <div className="flex justify-between items-center mb-4">
-                  <span className="text-[10px] font-black uppercase text-slate-500 tracking-wider">Resume ATS score</span>
-                  <Sparkles className="text-emerald-500" size={18} />
-                </div>
-                <div className="text-3xl font-black text-white">{analytics.resumeScore}%</div>
-                <div className="w-full bg-white/5 h-1.5 rounded-full overflow-hidden mt-3">
-                  <div className="bg-emerald-500 h-full transition-all" style={{ width: `${analytics.resumeScore}%` }} />
-                </div>
-              </div>
-              <div className="bg-slate-900/50 border border-white/5 rounded-3xl p-6">
-                <div className="flex justify-between items-center mb-4">
-                  <span className="text-[10px] font-black uppercase text-slate-500 tracking-wider">Market Demand Score</span>
-                  <LineChart className="text-purple-500" size={18} />
-                </div>
-                <div className="text-3xl font-black text-white">{analytics.marketDemandScore}%</div>
-                <div className="w-full bg-white/5 h-1.5 rounded-full overflow-hidden mt-3">
-                  <div className="bg-purple-500 h-full transition-all" style={{ width: `${analytics.marketDemandScore}%` }} />
-                </div>
-              </div>
-              <div className="bg-slate-900/50 border border-white/5 rounded-3xl p-6">
-                <div className="flex justify-between items-center mb-4">
-                  <span className="text-[10px] font-black uppercase text-slate-500 tracking-wider">Application Success Rate</span>
-                  <CheckCircle className="text-indigo-500" size={18} />
-                </div>
-                <div className="text-3xl font-black text-white">{analytics.successRate}%</div>
-                <div className="w-full bg-white/5 h-1.5 rounded-full overflow-hidden mt-3">
-                  <div className="bg-indigo-500 h-full transition-all" style={{ width: `${analytics.successRate}%` }} />
-                </div>
+              <div className="text-[10px] text-carbon-muted font-bold uppercase tracking-widest">
+                Local Time: {new Date().toLocaleTimeString()}
               </div>
             </div>
 
-            {/* Split layout: Hunt Params + Activity stream */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-              {/* Left column: Scanning control */}
-              <div className="lg:col-span-4 space-y-8">
-                <section className="bg-slate-900/50 rounded-3xl border border-white/5 p-6">
-                  <h3 className="text-xs font-black text-white uppercase tracking-wider mb-6 flex items-center gap-2">
-                    <Settings size={14} className="text-blue-500" /> Scanning Preferences
-                  </h3>
-                  <div className="space-y-5">
-                    <div className="space-y-2">
-                      <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Job Keywords</label>
-                      <input type="text" value={keywords} onChange={(e) => setKeywords(e.target.value)} placeholder="e.g. Frontend Engineer, Golang" className="w-full bg-black/40 border border-white/5 rounded-xl px-4 py-2.5 focus:border-blue-500 outline-none text-xs text-white" />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Target Cities</label>
-                      <input type="text" value={locations} onChange={(e) => setLocations(e.target.value)} placeholder="e.g. Remote, Bangalore" className="w-full bg-black/40 border border-white/5 rounded-xl px-4 py-2.5 focus:border-blue-500 outline-none text-xs text-white" />
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Commitment</label>
-                        <select value={jobType} onChange={(e) => setJobType(e.target.value)} className="w-full bg-black/40 border border-white/5 rounded-xl px-3 py-2.5 focus:border-blue-500 outline-none text-xs text-slate-300">
-                          <option value="All">All Types</option>
-                          <option value="F">Full-time</option>
-                          <option value="P">Part-time</option>
-                          <option value="I">Internship</option>
-                        </select>
-                      </div>
-                      <div className="space-y-2">
-                        <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Seniority</label>
-                        <select value={expLevel} onChange={(e) => setExpLevel(e.target.value)} className="w-full bg-black/40 border border-white/5 rounded-xl px-3 py-2.5 focus:border-blue-500 outline-none text-xs text-slate-300">
-                          <option value="All">All Levels</option>
-                          <option value="2">Fresher / Intern</option>
-                          <option value="4">Experienced</option>
-                        </select>
-                      </div>
-                    </div>
-                    <button onClick={savePreferences} disabled={savingPrefs} className="w-full bg-blue-600 hover:bg-blue-500 text-white py-3 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all">
-                      {savingPrefs ? 'Updating scanner...' : 'Save Parameters'}
-                    </button>
-                  </div>
-                </section>
+            {/* Grid layout containing Metrics, Config, Logs */}
+            <div className="grid grid-cols-1 xl:grid-cols-12 gap-8">
+              
+              {/* Metric panel */}
+              <div className="xl:col-span-4 carbon-panel p-8 space-y-8">
+                <div>
+                  <span className="text-[10px] font-bold text-carbon-muted font-mono uppercase block mb-1">01. Stats</span>
+                  <h3 className="text-xs font-bold uppercase tracking-widest text-white">Semantic Metrics</h3>
+                </div>
 
-                <section className="bg-slate-900/80 rounded-3xl border border-white/5 p-6 h-[300px] flex flex-col">
-                  <h3 className="text-xs font-black text-white uppercase tracking-wider mb-4 flex items-center gap-2">
-                    <Terminal size={14} className="text-green-500" /> System Stream Logs
-                  </h3>
-                  <div className="flex-1 bg-black/60 rounded-xl p-4 font-mono text-[10px] overflow-y-auto space-y-1.5 border border-white/5">
-                    {logs.map((log, i) => (
-                      <div key={i} className="text-green-500/80 leading-relaxed break-all">
-                        <span className="text-slate-700 mr-1.5">[{new Date().toLocaleTimeString()}]</span>
-                        {log}
-                      </div>
-                    ))}
-                    {logs.length === 0 && <div className="text-slate-600">Waiting for discoveries...</div>}
-                    <div ref={logEndRef} />
+                <div className="space-y-6">
+                  <div>
+                    <div className="flex justify-between text-[10px] uppercase font-bold tracking-wider mb-2">
+                      <span className="text-slate-500">Profile Strength</span>
+                      <span className="text-white">{analytics.profileStrength}%</span>
+                    </div>
+                    <div className="w-full bg-zinc-900 h-1 rounded-none overflow-hidden">
+                      <div className="bg-white h-full" style={{ width: `${analytics.profileStrength}%` }} />
+                    </div>
                   </div>
-                </section>
-              </div>
 
-              {/* Right column: Market insights & brief statistics */}
-              <div className="lg:col-span-8 space-y-8">
-                <section className="bg-slate-900/50 rounded-3xl border border-white/5 p-6">
-                  <h3 className="text-xs font-black text-white uppercase tracking-wider mb-6 flex items-center gap-2">
-                    <TrendingUp size={14} className="text-purple-500" /> Career Market Intelligence
-                  </h3>
-                  {marketInsights ? (
-                    <div className="space-y-6">
-                      <p className="text-sm leading-relaxed text-slate-300 bg-white/[0.02] border-l-2 border-purple-500 p-4 rounded-r-xl">
-                        {marketInsights.insightsSummary}
-                      </p>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div>
-                          <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3">Trending Tech Demands</h4>
-                          <div className="flex flex-wrap gap-2">
-                            {marketInsights.trendingSkills?.map((skill, idx) => (
-                              <span key={idx} className="px-3 py-1 bg-purple-500/10 border border-purple-500/20 text-purple-400 rounded-lg text-xs font-bold">
-                                {skill}
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-                        <div>
-                          <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3">Target Details</h4>
-                          <div className="space-y-1.5 text-xs">
-                            <div className="flex justify-between"><span className="text-slate-500">Average Salary Band:</span> <span className="font-bold text-white">{marketInsights.averageSalary}</span></div>
-                            <div className="flex justify-between"><span className="text-slate-500">Active Hirers:</span> <span className="font-bold text-white">{marketInsights.mostHiringCompanies?.join(', ')}</span></div>
-                          </div>
-                        </div>
-                      </div>
+                  <div>
+                    <div className="flex justify-between text-[10px] uppercase font-bold tracking-wider mb-2">
+                      <span className="text-slate-500">Resume ATS Score</span>
+                      <span className="text-white">{analytics.resumeScore}%</span>
                     </div>
-                  ) : (
-                    <div className="text-slate-500 text-xs py-8 text-center">
-                      Aggregating market trends. Real-time insights will populate as scanning proceeds.
+                    <div className="w-full bg-zinc-900 h-1 rounded-none overflow-hidden">
+                      <div className="bg-white h-full" style={{ width: `${analytics.resumeScore}%` }} />
                     </div>
-                  )}
-                </section>
+                  </div>
 
-                {/* Pipeline overview */}
-                <section className="bg-slate-900/50 rounded-3xl border border-white/5 p-6">
-                  <h3 className="text-xs font-black text-white uppercase tracking-wider mb-6">Pipeline Tracker</h3>
-                  <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-                    <div className="bg-white/5 rounded-2xl p-4 text-center">
-                      <div className="text-slate-500 text-[10px] font-black uppercase tracking-wider mb-1">Found</div>
-                      <div className="text-2xl font-black text-white">{analytics.totalJobs}</div>
+                  <div>
+                    <div className="flex justify-between text-[10px] uppercase font-bold tracking-wider mb-2">
+                      <span className="text-slate-500">Market Demand Index</span>
+                      <span className="text-white">{analytics.marketDemandScore}%</span>
                     </div>
-                    <div className="bg-blue-600/10 border border-blue-500/20 rounded-2xl p-4 text-center">
-                      <div className="text-blue-400 text-[10px] font-black uppercase tracking-wider mb-1">High Match</div>
-                      <div className="text-2xl font-black text-blue-400">{analytics.matchedCount}</div>
-                    </div>
-                    <div className="bg-yellow-600/10 border border-yellow-500/20 rounded-2xl p-4 text-center">
-                      <div className="text-yellow-400 text-[10px] font-black uppercase tracking-wider mb-1">Saved</div>
-                      <div className="text-2xl font-black text-yellow-400">{analytics.savedCount}</div>
-                    </div>
-                    <div className="bg-green-600/10 border border-green-500/20 rounded-2xl p-4 text-center">
-                      <div className="text-green-400 text-[10px] font-black uppercase tracking-wider mb-1">Applied</div>
-                      <div className="text-2xl font-black text-green-400">{analytics.appliedCount}</div>
-                    </div>
-                    <div className="bg-indigo-600/10 border border-indigo-500/20 rounded-2xl p-4 text-center col-span-2 md:col-span-1">
-                      <div className="text-indigo-400 text-[10px] font-black uppercase tracking-wider mb-1">Interviews</div>
-                      <div className="text-2xl font-black text-indigo-400">{analytics.interviewCount}</div>
+                    <div className="w-full bg-zinc-900 h-1 rounded-none overflow-hidden">
+                      <div className="bg-white h-full" style={{ width: `${analytics.marketDemandScore}%` }} />
                     </div>
                   </div>
-                </section>
-              </div>
-            </div>
-          </div>
-        )}
 
-        {/* Tab 2: Job Opportunities Feed */}
-        {activeTab === 'jobs' && (
-          <div className="grid grid-cols-1 xl:grid-cols-12 gap-10">
-            {/* Filters sidebar */}
-            <div className="xl:col-span-3 space-y-6">
-              <div className="bg-slate-900/50 border border-white/5 rounded-3xl p-6 sticky top-[150px]">
-                <h3 className="text-xs font-black text-white uppercase tracking-wider mb-6">Filter Discoveries</h3>
-                <div className="space-y-5 text-xs">
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Query</label>
-                    <input 
-                      type="text" 
-                      value={filterKeyword} 
-                      onChange={(e) => setFilterKeyword(e.target.value)} 
-                      placeholder="Title, Company, Skills..."
-                      className="w-full bg-black/40 border border-white/5 rounded-xl px-4 py-2.5 focus:border-blue-500 outline-none text-white" 
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Location Status</label>
-                    <select value={filterRemote} onChange={(e) => setFilterRemote(e.target.value)} className="w-full bg-black/40 border border-white/5 rounded-xl px-3 py-2.5 focus:border-blue-500 outline-none text-slate-300">
-                      <option value="All">All Setup</option>
-                      <option value="Remote">Remote Only</option>
-                      <option value="Onsite">Onsite Only</option>
-                      <option value="Hybrid">Hybrid Only</option>
-                    </select>
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Source Platform</label>
-                    <select value={filterSource} onChange={(e) => setFilterSource(e.target.value)} className="w-full bg-black/40 border border-white/5 rounded-xl px-3 py-2.5 focus:border-blue-500 outline-none text-slate-300">
-                      <option value="All">All Sources</option>
-                      <option value="LinkedIn">LinkedIn</option>
-                      <option value="Naukri">Naukri</option>
-                      <option value="Wellfound">Wellfound</option>
-                      <option value="YC Jobs">YC Jobs</option>
-                    </select>
-                  </div>
-                  <div className="space-y-1.5">
-                    <div className="flex justify-between items-center mb-1">
-                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Min Match Score</label>
-                      <span className="font-bold text-blue-400">{filterMinScore}%</span>
+                  <div>
+                    <div className="flex justify-between text-[10px] uppercase font-bold tracking-wider mb-2">
+                      <span className="text-slate-500">Success rate</span>
+                      <span className="text-white">{analytics.successRate}%</span>
                     </div>
-                    <input 
-                      type="range" 
-                      min="0" 
-                      max="100" 
-                      value={filterMinScore} 
-                      onChange={(e) => setFilterMinScore(Number(e.target.value))} 
-                      className="w-full accent-blue-500" 
-                    />
+                    <div className="w-full bg-zinc-900 h-1 rounded-none overflow-hidden">
+                      <div className="bg-white h-full" style={{ width: `${analytics.successRate}%` }} />
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
 
-            {/* Opportunity cards list */}
-            <div className="xl:col-span-9 space-y-6">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-md font-bold text-white uppercase tracking-wider flex items-center gap-2">
-                  Matching Jobs <span className="text-xs bg-blue-600 text-white px-2 py-0.5 rounded-full">{filteredJobs.length} Hits</span>
-                </h3>
-              </div>
+              {/* Preferences panel */}
+              <div className="xl:col-span-4 carbon-panel p-8 space-y-8">
+                <div>
+                  <span className="text-[10px] font-bold text-carbon-muted font-mono uppercase block mb-1">02. Config</span>
+                  <h3 className="text-xs font-bold uppercase tracking-widest text-white">Hunt Parameters</h3>
+                </div>
 
-              <div className="space-y-6">
-                {filteredJobs.map((job) => (
-                  <div 
-                    key={job.job_id} 
-                    className={`bg-slate-900/40 rounded-[2rem] p-6 border transition-all duration-300 hover:border-white/10 relative overflow-hidden ${
-                      job.matchScore >= 80 ? 'border-blue-500/20 bg-blue-500/[0.01]' : 'border-white/5'
-                    }`}
-                  >
-                    <div className="flex flex-col md:flex-row gap-6 justify-between">
-                      {/* Left: Job Core Info */}
-                      <div className="space-y-3 flex-1">
-                        <div className="flex flex-wrap gap-2 items-center">
-                          <span className={`px-2.5 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest border ${
-                            job.source === 'LinkedIn' ? 'bg-blue-500/10 border-blue-500/20 text-blue-400' :
-                            job.source === 'Naukri' ? 'bg-purple-500/10 border-purple-500/20 text-purple-400' :
-                            'bg-yellow-500/10 border-yellow-500/20 text-yellow-400'
-                          }`}>
-                            {job.source}
-                          </span>
-                          {job.remote_status && (
-                            <span className="px-2.5 py-0.5 bg-white/5 border border-white/10 rounded-full text-[8px] font-bold text-slate-400">
-                              {job.remote_status}
-                            </span>
-                          )}
-                          {job.experience && (
-                            <span className="px-2.5 py-0.5 bg-white/5 border border-white/10 rounded-full text-[8px] font-bold text-slate-400">
-                              {job.experience}
-                            </span>
-                          )}
-                        </div>
-                        <div>
-                          <h4 className="text-lg font-black text-white tracking-tight">{job.title}</h4>
-                          <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">{job.company} &bull; <span className="font-normal">{job.location}</span></p>
-                        </div>
-                        
-                        <p className="text-xs text-slate-400 leading-relaxed max-w-2xl line-clamp-2">
-                          {job.summary || job.description}
-                        </p>
+                <div className="space-y-4 text-xs">
+                  <div className="space-y-1">
+                    <label className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Job Keywords</label>
+                    <input type="text" value={keywords} onChange={(e) => setKeywords(e.target.value)} placeholder="e.g. Frontend Engineer, Golang" className="w-full bg-black/60 border border-zinc-800 p-2.5 focus:border-white outline-none text-white text-xs rounded-none" />
+                  </div>
+                  
+                  <div className="space-y-1">
+                    <label className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Cities</label>
+                    <input type="text" value={locations} onChange={(e) => setLocations(e.target.value)} placeholder="e.g. Remote, Bangalore" className="w-full bg-black/60 border border-zinc-800 p-2.5 focus:border-white outline-none text-white text-xs rounded-none" />
+                  </div>
 
-                        {/* Matched/Missing Skills list */}
-                        <div className="space-y-2 mt-4">
-                          {job.matchedSkills && job.matchedSkills.length > 0 && (
-                            <div className="flex flex-wrap items-center gap-1.5">
-                              <span className="text-[8px] font-black text-green-500 uppercase mr-1.5">Match:</span>
-                              {job.matchedSkills.map((s, idx) => (
-                                <span key={idx} className="px-2 py-0.5 bg-green-500/10 border border-green-500/20 text-green-400 rounded text-[9px] font-semibold">
-                                  {s}
-                                </span>
-                              ))}
-                            </div>
-                          )}
-                          {job.missingSkills && job.missingSkills.length > 0 && (
-                            <div className="flex flex-wrap items-center gap-1.5">
-                              <span className="text-[8px] font-black text-red-400 uppercase mr-1.5">Missing:</span>
-                              {job.missingSkills.map((s, idx) => (
-                                <span key={idx} className="px-2 py-0.5 bg-red-500/10 border border-red-500/20 text-red-400 rounded text-[9px] font-semibold">
-                                  {s}
-                                </span>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Right: AI analysis match score & CTAs */}
-                      <div className="flex flex-row md:flex-col justify-between items-center md:items-end w-full md:w-auto border-t md:border-t-0 border-white/5 pt-4 md:pt-0 gap-4">
-                        <div className="flex items-center gap-4">
-                          <div className="text-right">
-                            <span className="text-[9px] text-slate-500 font-black uppercase tracking-wider block">Match score</span>
-                            <span className={`text-2xl font-black font-mono ${
-                              job.matchScore >= 80 ? 'text-blue-400' : (job.matchScore >= 60 ? 'text-yellow-400' : 'text-slate-500')
-                            }`}>
-                              {job.matchScore || 0}%
-                            </span>
-                          </div>
-                          {job.applyImmediately && (
-                            <span className="p-1 bg-blue-500 text-white rounded-full text-[8px] font-bold uppercase animate-pulse px-2">Apply</span>
-                          )}
-                        </div>
-
-                        {/* Recommendation details popup message */}
-                        {job.recommendationReason && (
-                          <div className="hidden lg:block max-w-[200px] text-right text-[10px] text-slate-500 leading-snug italic">
-                            "{job.recommendationReason.slice(0, 80)}..."
-                          </div>
-                        )}
-
-                        {/* CTA group */}
-                        <div className="flex gap-2">
-                          {job.status !== 'applied' ? (
-                            <button 
-                              onClick={() => updateJobStatus(job.job_id, 'applied')}
-                              className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all"
-                            >
-                              Applied
-                            </button>
-                          ) : (
-                            <span className="px-3 py-2 bg-green-500/10 border border-green-500/20 text-green-400 rounded-xl text-xs font-bold flex items-center gap-1.5">
-                              <Check size={14} /> Applied
-                            </span>
-                          )}
-                          {job.status !== 'saved' && job.status !== 'applied' && (
-                            <button 
-                              onClick={() => updateJobStatus(job.job_id, 'saved')}
-                              className="p-2 bg-white/5 border border-white/10 hover:border-yellow-500/30 text-slate-400 hover:text-white rounded-xl transition-all"
-                            >
-                              <Bookmark size={14} />
-                            </button>
-                          )}
-                          <a 
-                            href={job.url} 
-                            target="_blank" 
-                            rel="noopener noreferrer" 
-                            className="px-4 py-2 bg-white/5 border border-white/10 hover:bg-white/10 hover:text-white text-slate-300 rounded-xl text-xs font-black uppercase tracking-wider text-center transition-all"
-                          >
-                            JD Link
-                          </a>
-                        </div>
-                      </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <label className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Type</label>
+                      <select value={jobType} onChange={(e) => setJobType(e.target.value)} className="w-full bg-black/60 border border-zinc-800 p-2.5 focus:border-white outline-none text-slate-300 text-xs rounded-none">
+                        <option value="All">All Types</option>
+                        <option value="F">Full-time</option>
+                        <option value="P">Part-time</option>
+                        <option value="I">Internship</option>
+                      </select>
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Seniority</label>
+                      <select value={expLevel} onChange={(e) => setExpLevel(e.target.value)} className="w-full bg-black/60 border border-zinc-800 p-2.5 focus:border-white outline-none text-slate-300 text-xs rounded-none">
+                        <option value="All">All Levels</option>
+                        <option value="2">Fresher / Intern</option>
+                        <option value="4">Experienced</option>
+                      </select>
                     </div>
                   </div>
-                ))}
 
-                {filteredJobs.length === 0 && (
-                  <div className="bg-slate-900/30 border border-white/5 rounded-3xl p-12 text-center text-slate-500">
-                    No matching discoveries found matching criteria. Update keywords or sliding score filters.
-                  </div>
-                )}
+                  <button onClick={savePreferences} disabled={savingPrefs} className="w-full bg-white text-black py-3 font-bold text-[9px] uppercase tracking-widest hover:bg-slate-200 transition-all mt-2">
+                    {savingPrefs ? 'Updating...' : 'Save Config'}
+                  </button>
+                </div>
               </div>
-            </div>
-          </div>
-        )}
 
-        {/* Tab 3: Skills Pathing / Up-skill Plan */}
-        {activeTab === 'upskill' && (
-          <div className="space-y-8">
-            <div className="max-w-4xl">
-              <h3 className="text-lg font-black text-white uppercase tracking-wider mb-2 flex items-center gap-2">
-                <BookOpen className="text-blue-500" size={18} /> Personalized Up-skilling Plan
-              </h3>
-              <p className="text-xs text-slate-500 leading-relaxed mb-8">
-                Based on active search requirements across public postings, your profile shows skills gaps. 
-                Improve your compatibility percentage and matching yields by adopting the following tools.
-              </p>
+              {/* Logs Stream panel */}
+              <div className="xl:col-span-4 carbon-panel p-8 flex flex-col h-[380px]">
+                <div className="mb-4">
+                  <span className="text-[10px] font-bold text-carbon-muted font-mono uppercase block mb-1">03. Logs</span>
+                  <h3 className="text-xs font-bold uppercase tracking-widest text-white">System Logs</h3>
+                </div>
 
-              {upskillPlan.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                  {upskillPlan.map((plan, idx) => (
-                    <div key={idx} className="bg-slate-900/50 border border-white/5 rounded-3xl p-6 space-y-4">
-                      <div className="flex justify-between items-start">
-                        <h4 className="text-md font-black text-white tracking-tight">{plan.skill}</h4>
-                        <div className="flex gap-2 text-[9px] uppercase font-bold tracking-wider">
-                          <span className="px-2 py-0.5 bg-blue-500/10 border border-blue-500/20 text-blue-400 rounded flex items-center gap-1"><Clock size={10} /> {plan.learningTime}</span>
-                          <span className="px-2 py-0.5 bg-green-500/10 border border-green-500/20 text-green-400 rounded">{plan.roi}</span>
-                        </div>
-                      </div>
-                      <div className="space-y-3 text-xs leading-relaxed">
-                        <div>
-                          <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider block">Recommended Course:</span>
-                          <span className="text-slate-300 font-medium">{plan.course}</span>
-                        </div>
-                        <div>
-                          <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider block">Practical Portfolio Project:</span>
-                          <span className="text-slate-300 font-medium">{plan.project}</span>
-                        </div>
-                        {plan.certification && (
-                          <div>
-                            <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider block">Target Certification:</span>
-                            <span className="text-slate-300 font-medium">{plan.certification}</span>
-                          </div>
-                        )}
-                      </div>
+                <div className="flex-1 bg-black/60 border border-zinc-850 p-4 font-mono text-[9px] overflow-y-auto space-y-2 leading-relaxed">
+                  {logs.map((log, i) => (
+                    <div key={i} className="text-slate-400 break-all">
+                      <span className="text-zinc-600 mr-2">[{new Date().toLocaleTimeString()}]</span>
+                      {log}
                     </div>
                   ))}
+                  {logs.length === 0 && <div className="text-zinc-700">Awaiting scanning loops...</div>}
+                  <div ref={logEndRef} />
+                </div>
+              </div>
+            </div>
+
+            {/* Bottom Market Intelligence */}
+            <div className="carbon-panel p-8 space-y-6">
+              <div>
+                <span className="text-[10px] font-bold text-carbon-muted font-mono uppercase block mb-1">04. Market Demands</span>
+                <h3 className="text-xs font-bold uppercase tracking-widest text-white">Career Intelligence Analytics</h3>
+              </div>
+
+              {marketInsights ? (
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 text-xs leading-relaxed">
+                  <div className="lg:col-span-6 space-y-3">
+                    <div className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Active Demands Summary</div>
+                    <p className="text-slate-300 font-light border-l border-zinc-800 pl-4 py-1">
+                      {marketInsights.insightsSummary}
+                    </p>
+                  </div>
+                  
+                  <div className="lg:col-span-3 space-y-3">
+                    <div className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Trending Tech Gaps</div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {marketInsights.trendingSkills?.map((skill, idx) => (
+                        <span key={idx} className="px-2 py-0.5 bg-zinc-900 border border-zinc-800 text-slate-300 text-[10px] font-mono">
+                          {skill}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="lg:col-span-3 space-y-3">
+                    <div className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Stats Summary</div>
+                    <div className="space-y-1.5 font-light">
+                      <div className="flex justify-between"><span className="text-slate-500">Average Band:</span> <span className="font-bold text-white font-mono">{marketInsights.averageSalary}</span></div>
+                      <div className="flex justify-between"><span className="text-slate-500">Top Hirers:</span> <span className="font-bold text-white text-right truncate max-w-[120px]">{marketInsights.mostHiringCompanies?.join(', ')}</span></div>
+                    </div>
+                  </div>
                 </div>
               ) : (
-                <div className="bg-slate-900/30 border border-white/5 rounded-3xl p-12 text-center text-slate-500 text-xs">
-                  Please upload your resume to generate a personalized skills gap learning path.
+                <div className="text-zinc-600 text-xs py-4">
+                  Aggregating market trends. Real-time intelligence will populate as scanning proceeds.
                 </div>
               )}
             </div>
+
+            {/* Pipeline Tracker */}
+            <div className="carbon-panel p-8 space-y-6">
+              <div>
+                <span className="text-[10px] font-bold text-carbon-muted font-mono uppercase block mb-1">05. Pipeline</span>
+                <h3 className="text-xs font-bold uppercase tracking-widest text-white">Application Pipeline</h3>
+              </div>
+
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-6 text-center">
+                <div className="border border-zinc-850 p-4">
+                  <div className="text-slate-500 text-[9px] uppercase tracking-wider mb-1">Crawled</div>
+                  <div className="text-xl font-bold font-mono text-white">{analytics.totalJobs}</div>
+                </div>
+                <div className="border border-zinc-850 p-4">
+                  <div className="text-slate-500 text-[9px] uppercase tracking-wider mb-1">Match &ge; 80%</div>
+                  <div className="text-xl font-bold font-mono text-white">{analytics.matchedCount}</div>
+                </div>
+                <div className="border border-zinc-850 p-4">
+                  <div className="text-slate-500 text-[9px] uppercase tracking-wider mb-1">Saved</div>
+                  <div className="text-xl font-bold font-mono text-white">{analytics.savedCount}</div>
+                </div>
+                <div className="border border-zinc-850 p-4">
+                  <div className="text-slate-500 text-[9px] uppercase tracking-wider mb-1">Applied</div>
+                  <div className="text-xl font-bold font-mono text-white">{analytics.appliedCount}</div>
+                </div>
+                <div className="border border-zinc-850 p-4 col-span-2 md:col-span-1">
+                  <div className="text-slate-500 text-[9px] uppercase tracking-wider mb-1">Interviews</div>
+                  <div className="text-xl font-bold font-mono text-white">{analytics.interviewCount}</div>
+                </div>
+              </div>
+            </div>
+
           </div>
         )}
 
-        {/* Tab 4: Resume Critique & ATS Improvements */}
-        {activeTab === 'critique' && (
-          <div className="space-y-8">
-            <div className="max-w-4xl">
-              <h3 className="text-lg font-black text-white uppercase tracking-wider mb-2 flex items-center gap-2">
-                <Sparkles className="text-emerald-500" size={18} /> AI ATS Optimization Suggests
-              </h3>
-              <p className="text-xs text-slate-500 leading-relaxed mb-8">
-                Detailed critiques mapping your uploaded profile against recent job specifications to ensure high ATS conversion.
-              </p>
+        {/* Tab 01: Discoveries / Jobs Feed */}
+        {activeTab === 'jobs' && (
+          <div className="space-y-12">
+            <div className="flex justify-between items-end border-b border-carbon pb-8">
+              <div>
+                <span className="text-[10px] font-bold font-mono tracking-widest text-carbon-muted uppercase block mb-1">01. Discoveries</span>
+                <h2 className="text-xl font-bold uppercase tracking-[0.2em] text-white">Active Postings</h2>
+              </div>
+            </div>
 
-              {resumeSuggestions ? (
-                <div className="space-y-6 text-xs">
-                  <div className="bg-slate-900/50 border border-white/5 rounded-3xl p-6">
-                    <h4 className="text-[10px] font-black text-emerald-500 uppercase tracking-widest mb-3">Target Keywords to Add</h4>
+            <div className="grid grid-cols-1 xl:grid-cols-12 gap-10">
+              {/* Filters sidebar */}
+              <div className="xl:col-span-3 space-y-6">
+                <div className="carbon-panel p-6 space-y-6 sticky top-6">
+                  <h3 className="text-xs font-bold uppercase tracking-widest text-white">Filter Results</h3>
+                  
+                  <div className="space-y-4 text-xs">
+                    <div className="space-y-1">
+                      <label className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Query</label>
+                      <input 
+                        type="text" 
+                        value={filterKeyword} 
+                        onChange={(e) => setFilterKeyword(e.target.value)} 
+                        placeholder="Title, Company, Skills..."
+                        className="w-full bg-black/60 border border-zinc-800 p-2 focus:border-white outline-none text-white text-xs rounded-none" 
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Location Mode</label>
+                      <select value={filterRemote} onChange={(e) => setFilterRemote(e.target.value)} className="w-full bg-black/60 border border-zinc-800 p-2 focus:border-white outline-none text-slate-300 text-xs rounded-none">
+                        <option value="All">All Locations</option>
+                        <option value="Remote">Remote Only</option>
+                        <option value="Onsite">Onsite Only</option>
+                        <option value="Hybrid">Hybrid Only</option>
+                      </select>
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Source</label>
+                      <select value={filterSource} onChange={(e) => setFilterSource(e.target.value)} className="w-full bg-black/60 border border-zinc-800 p-2 focus:border-white outline-none text-slate-300 text-xs rounded-none">
+                        <option value="All">All Sources</option>
+                        <option value="LinkedIn">LinkedIn</option>
+                        <option value="Naukri">Naukri</option>
+                        <option value="Wellfound">Wellfound</option>
+                        <option value="YC Jobs">YC Jobs</option>
+                      </select>
+                    </div>
+                    <div className="space-y-1">
+                      <div className="flex justify-between items-center mb-1">
+                        <label className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Min Match Score</label>
+                        <span className="font-mono text-white">{filterMinScore}%</span>
+                      </div>
+                      <input 
+                        type="range" 
+                        min="0" 
+                        max="100" 
+                        value={filterMinScore} 
+                        onChange={(e) => setFilterMinScore(Number(e.target.value))} 
+                        className="w-full accent-white" 
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Opportunities Feed */}
+              <div className="xl:col-span-9 space-y-6">
+                <div className="flex justify-between items-center mb-2">
+                  <div className="text-[10px] uppercase tracking-widest font-bold text-slate-500">
+                    Showing {filteredJobs.length} opportunities matched
+                  </div>
+                </div>
+
+                <div className="space-y-6">
+                  {filteredJobs.map((job) => (
+                    <div 
+                      key={job.job_id} 
+                      className={`carbon-panel p-6 border-l-2 transition-all duration-300 hover:border-slate-400 ${
+                        job.matchScore >= 80 ? 'border-l-white' : 'border-l-transparent'
+                      }`}
+                    >
+                      <div className="flex flex-col md:flex-row gap-6 justify-between">
+                        {/* Job Details */}
+                        <div className="space-y-4 flex-1">
+                          <div className="flex flex-wrap gap-2 items-center text-[9px] font-mono">
+                            <span className="px-2 py-0.5 bg-zinc-900 border border-zinc-850 text-slate-400">
+                              {job.source}
+                            </span>
+                            {job.remote_status && (
+                              <span className="px-2 py-0.5 bg-zinc-900 border border-zinc-850 text-slate-400">
+                                {job.remote_status}
+                              </span>
+                            )}
+                            {job.experience && (
+                              <span className="px-2 py-0.5 bg-zinc-900 border border-zinc-850 text-slate-400">
+                                {job.experience}
+                              </span>
+                            )}
+                          </div>
+                          
+                          <div>
+                            <h4 className="text-md font-bold text-white tracking-wide">{job.title}</h4>
+                            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{job.company} &bull; <span className="font-normal normal-case">{job.location}</span></p>
+                          </div>
+                          
+                          <p className="text-xs text-slate-400 leading-relaxed font-light line-clamp-2">
+                            {job.summary || job.description}
+                          </p>
+
+                          {/* Skill alignment tag arrays */}
+                          <div className="space-y-2">
+                            {job.matchedSkills && job.matchedSkills.length > 0 && (
+                              <div className="flex flex-wrap items-center gap-1.5">
+                                <span className="text-[8px] font-bold text-slate-500 uppercase tracking-wider mr-2">Matched:</span>
+                                {job.matchedSkills.map((s, idx) => (
+                                  <span key={idx} className="px-1.5 py-0.5 bg-zinc-900 border border-zinc-850 text-slate-300 text-[9px] font-mono">
+                                    {s}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+                            {job.missingSkills && job.missingSkills.length > 0 && (
+                              <div className="flex flex-wrap items-center gap-1.5">
+                                <span className="text-[8px] font-bold text-slate-500 uppercase tracking-wider mr-2">Missing:</span>
+                                {job.missingSkills.map((s, idx) => (
+                                  <span key={idx} className="px-1.5 py-0.5 bg-zinc-900 border border-red-950/20 text-red-400/80 text-[9px] font-mono">
+                                    {s}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Analysis Scores & Actions */}
+                        <div className="flex flex-row md:flex-col justify-between items-center md:items-end w-full md:w-auto border-t md:border-t-0 border-zinc-850 pt-4 md:pt-0 gap-4 shrink-0">
+                          <div className="text-right">
+                            <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider block mb-0.5">Match score</span>
+                            <span className="text-2xl font-bold font-mono text-white">
+                              {job.matchScore || 0}%
+                            </span>
+                          </div>
+
+                          {job.recommendationReason && (
+                            <div className="hidden lg:block max-w-[200px] text-right text-[9px] text-slate-500 leading-snug font-light italic">
+                              "{job.recommendationReason.slice(0, 75)}..."
+                            </div>
+                          )}
+
+                          <div className="flex gap-2">
+                            {job.status !== 'applied' ? (
+                              <button 
+                                onClick={() => updateJobStatus(job.job_id, 'applied')}
+                                className="px-4 py-2 bg-white text-black hover:bg-slate-200 text-[10px] font-bold uppercase tracking-widest transition-all"
+                              >
+                                Applied
+                              </button>
+                            ) : (
+                              <span className="px-3 py-2 bg-zinc-900 border border-zinc-800 text-slate-400 text-[10px] font-bold uppercase tracking-widest flex items-center gap-1.5">
+                                <Check size={10} /> Applied
+                              </span>
+                            )}
+                            {job.status !== 'saved' && job.status !== 'applied' && (
+                              <button 
+                                onClick={() => updateJobStatus(job.job_id, 'saved')}
+                                className="p-2 bg-zinc-900 border border-zinc-800 text-slate-400 hover:text-white transition-all"
+                              >
+                                <Bookmark size={12} />
+                              </button>
+                            )}
+                            <a 
+                              href={job.url} 
+                              target="_blank" 
+                              rel="noopener noreferrer" 
+                              className="px-4 py-2 bg-zinc-900 border border-zinc-800 text-slate-300 hover:bg-zinc-800 text-[10px] font-bold uppercase tracking-widest text-center transition-all"
+                            >
+                              JD Link
+                            </a>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+
+                  {filteredJobs.length === 0 && (
+                    <div className="carbon-panel p-12 text-center text-slate-500 text-xs">
+                      No matching discoveries found. Update configuration filters.
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Tab 02: Skills Gap / Up-skill Plan */}
+        {activeTab === 'upskill' && (
+          <div className="space-y-12 max-w-4xl">
+            <div className="flex justify-between items-end border-b border-carbon pb-8">
+              <div>
+                <span className="text-[10px] font-bold font-mono tracking-widest text-carbon-muted uppercase block mb-1">02. Up-skilling Plan</span>
+                <h2 className="text-xl font-bold uppercase tracking-[0.2em] text-white">Skills Gap Analysis</h2>
+              </div>
+            </div>
+
+            <p className="text-xs text-slate-500 leading-relaxed font-light max-w-2xl">
+              Based on active search requirements across postings, your profile indicates specific technology gaps. 
+              Adopt these tools to optimize your compatibility ratios.
+            </p>
+
+            {upskillPlan.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                {upskillPlan.map((plan, idx) => (
+                  <div key={idx} className="carbon-panel p-8 space-y-6">
+                    <div className="flex justify-between items-start">
+                      <h4 className="text-md font-bold text-white tracking-wide">{plan.skill}</h4>
+                      <div className="flex gap-2 text-[9px] uppercase font-bold tracking-wider font-mono">
+                        <span className="px-2 py-0.5 bg-zinc-900 border border-zinc-850 text-slate-400">{plan.learningTime}</span>
+                        <span className="px-2 py-0.5 bg-zinc-900 border border-zinc-850 text-white">{plan.roi}</span>
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-4 text-xs leading-relaxed font-light">
+                      <div>
+                        <span className="text-[9px] text-slate-500 font-bold uppercase tracking-widest block mb-0.5">Recommended Course</span>
+                        <span className="text-slate-300">{plan.course}</span>
+                      </div>
+                      <div>
+                        <span className="text-[9px] text-slate-500 font-bold uppercase tracking-widest block mb-0.5">Practical Portfolio Project</span>
+                        <span className="text-slate-300">{plan.project}</span>
+                      </div>
+                      {plan.certification && (
+                        <div>
+                          <span className="text-[9px] text-slate-500 font-bold uppercase tracking-widest block mb-0.5">Certification Goal</span>
+                          <span className="text-slate-300">{plan.certification}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="carbon-panel p-12 text-center text-slate-500 text-xs">
+                Upload your resume to formulate a personalized learning roadmap.
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Tab 03: Resume ATS Optimization Critique */}
+        {activeTab === 'critique' && (
+          <div className="space-y-12 max-w-4xl">
+            <div className="flex justify-between items-end border-b border-carbon pb-8">
+              <div>
+                <span className="text-[10px] font-bold font-mono tracking-widest text-carbon-muted uppercase block mb-1">03. ATS Optimize</span>
+                <h2 className="text-xl font-bold uppercase tracking-[0.2em] text-white">Resume Critique Suggestions</h2>
+              </div>
+            </div>
+
+            <p className="text-xs text-slate-500 leading-relaxed font-light max-w-2xl">
+              AI-driven optimization critique matching your parsed profile structure against high-priority market demands.
+            </p>
+
+            {resumeSuggestions ? (
+              <div className="space-y-8 text-xs font-light">
+                <div className="carbon-panel p-8 space-y-4">
+                  <h4 className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">High Impact Keywords to Add</h4>
+                  <div className="flex flex-wrap gap-2">
+                    {resumeSuggestions.missingKeywords?.map((kw, idx) => (
+                      <span key={idx} className="px-2 py-0.5 bg-zinc-900 border border-zinc-850 text-white font-mono">
+                        + {kw}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+                
+                <div className="carbon-panel p-8 space-y-3">
+                  <h4 className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Formatting & Parsing Improvements</h4>
+                  <p className="text-slate-300 leading-relaxed text-sm">{resumeSuggestions.atsImprovements}</p>
+                </div>
+                
+                <div className="carbon-panel p-8 space-y-3">
+                  <h4 className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Recommended Project Enhancements</h4>
+                  <p className="text-slate-300 leading-relaxed text-sm">{resumeSuggestions.projectImprovements}</p>
+                </div>
+                
+                {resumeSuggestions.grammarFixes && (
+                  <div className="carbon-panel p-8 space-y-3">
+                    <h4 className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Action Verbs & Impact Metrics</h4>
+                    <p className="text-slate-300 leading-relaxed text-sm">{resumeSuggestions.grammarFixes}</p>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="carbon-panel p-12 text-center text-slate-500 text-xs">
+                Upload your resume to analyze keyword gaps and ATS layout feedback.
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Tab 04: Recruiter / Candidate Profile metadata details */}
+        {activeTab === 'profile' && (
+          <div className="space-y-12 max-w-5xl">
+            <div className="flex justify-between items-end border-b border-carbon pb-8">
+              <div>
+                <span className="text-[10px] font-bold font-mono tracking-widest text-carbon-muted uppercase block mb-1">04. Candidate Profile</span>
+                <h2 className="text-xl font-bold uppercase tracking-[0.2em] text-white">Parsed Profile Parameters</h2>
+              </div>
+            </div>
+
+            {profile ? (
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-8 text-xs leading-relaxed font-light">
+                {/* Left side details */}
+                <div className="md:col-span-4 carbon-panel p-8 space-y-6">
+                  <div className="text-center space-y-3">
+                    <div className="w-16 h-16 bg-white text-black flex items-center justify-center text-xl font-black mx-auto uppercase">
+                      {profile.name?.slice(0, 2)}
+                    </div>
+                    <div>
+                      <h4 className="text-md font-bold text-white">{profile.name}</h4>
+                      <span className="text-[9px] text-slate-500 font-bold uppercase tracking-widest block mt-1">{profile.current_role}</span>
+                    </div>
+                  </div>
+
+                  <div className="thin-accent-line" />
+
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-2.5 text-slate-400">
+                      <Mail size={12} className="text-slate-500" /> <span>{profile.email || "No email parsed"}</span>
+                    </div>
+                    <div className="flex items-center gap-2.5 text-slate-400">
+                      <Phone size={12} className="text-slate-500" /> <span>{profile.phone || "No phone parsed"}</span>
+                    </div>
+                    <div className="flex items-center gap-2.5 text-slate-400">
+                      <MapPin size={12} className="text-slate-500" /> <span>{profile.location}</span>
+                    </div>
+                    
+                    <div className="thin-accent-line" />
+                    
+                    <div className="flex justify-between text-slate-400">
+                      <span>Experience YOE:</span> <span className="font-bold text-white font-mono">{profile.yoe} Years</span>
+                    </div>
+                    <div className="flex justify-between text-slate-400">
+                      <span>Work Visa status:</span> <span className="font-bold text-white text-right">{profile.work_authorization || "Not Specified"}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Right side details */}
+                <div className="md:col-span-8 carbon-panel p-8 space-y-8">
+                  <div className="space-y-3">
+                    <h4 className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Extracted Technology Stack</h4>
                     <div className="flex flex-wrap gap-2">
-                      {resumeSuggestions.missingKeywords?.map((kw, idx) => (
-                        <span key={idx} className="px-2.5 py-1 bg-white/5 border border-white/10 text-slate-300 rounded font-medium">
-                          + {kw}
+                      {profile.skills?.map((s, idx) => (
+                        <span key={idx} className="px-2 py-0.5 bg-zinc-900 border border-zinc-850 text-slate-300 font-mono">
+                          {s}
                         </span>
                       ))}
                     </div>
                   </div>
                   
-                  <div className="bg-slate-900/50 border border-white/5 rounded-3xl p-6 space-y-2">
-                    <h4 className="text-[10px] font-black text-blue-400 uppercase tracking-widest">Formatting & ATS improvements</h4>
-                    <p className="text-slate-300 leading-relaxed text-sm">{resumeSuggestions.atsImprovements}</p>
-                  </div>
-                  
-                  <div className="bg-slate-900/50 border border-white/5 rounded-3xl p-6 space-y-2">
-                    <h4 className="text-[10px] font-black text-purple-400 uppercase tracking-widest">Recommended Project Enhancements</h4>
-                    <p className="text-slate-300 leading-relaxed text-sm">{resumeSuggestions.projectImprovements}</p>
-                  </div>
-                  
-                  {resumeSuggestions.grammarFixes && (
-                    <div className="bg-slate-900/50 border border-white/5 rounded-3xl p-6 space-y-2">
-                      <h4 className="text-[10px] font-black text-yellow-500 uppercase tracking-widest">Action Verbs & Impact Metrics</h4>
-                      <p className="text-slate-300 leading-relaxed text-sm">{resumeSuggestions.grammarFixes}</p>
+                  {profile.projects && profile.projects.length > 0 && (
+                    <div className="space-y-3">
+                      <h4 className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Key Project Summaries</h4>
+                      <ul className="list-disc pl-4 space-y-1.5 text-slate-400">
+                        {profile.projects.map((p, idx) => (
+                          <li key={idx} className="font-light">{p}</li>
+                        ))}
+                      </ul>
                     </div>
                   )}
-                </div>
-              ) : (
-                <div className="bg-slate-900/30 border border-white/5 rounded-3xl p-12 text-center text-slate-500 text-xs">
-                  Please upload your resume to generate personalized ATS suggestions.
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Tab 5: Recruiter Profile / Parsed Resume Info */}
-        {activeTab === 'profile' && (
-          <div className="space-y-8">
-            <div className="max-w-5xl">
-              <div className="flex justify-between items-start mb-6">
-                <div>
-                  <h3 className="text-lg font-black text-white uppercase tracking-wider flex items-center gap-2">
-                    <User className="text-blue-500" size={18} /> Candidate Agent Profile
-                  </h3>
-                  <p className="text-xs text-slate-500">Parsed metadata parameters stored in database.</p>
-                </div>
-              </div>
-
-              {profile ? (
-                <div className="grid grid-cols-1 md:grid-cols-12 gap-8 text-xs leading-relaxed">
-                  {/* Left Column: Basic Details */}
-                  <div className="md:col-span-4 bg-slate-900/50 border border-white/5 rounded-3xl p-6 space-y-6">
-                    <div className="text-center space-y-2">
-                      <div className="w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center text-xl font-black text-white mx-auto uppercase">
-                        {profile.name?.slice(0, 2)}
-                      </div>
-                      <h4 className="text-md font-black text-white">{profile.name}</h4>
-                      <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">{profile.current_role}</span>
-                    </div>
-
-                    <hr style={{ border: 0, borderTop: "1px solid rgba(255,255,255,0.05)" }} />
-
-                    <div className="space-y-4">
-                      <div className="flex items-center gap-2.5 text-slate-400">
-                        <Mail size={14} className="text-blue-500" /> <span>{profile.email || "No email parsed"}</span>
-                      </div>
-                      <div className="flex items-center gap-2.5 text-slate-400">
-                        <Phone size={14} className="text-blue-500" /> <span>{profile.phone || "No phone parsed"}</span>
-                      </div>
-                      <div className="flex items-center gap-2.5 text-slate-400">
-                        <MapPin size={14} className="text-blue-500" /> <span>{profile.location}</span>
-                      </div>
-                      <div className="flex justify-between text-slate-400">
-                        <span>Experience (YOE):</span> <span className="font-bold text-white">{profile.yoe} Years</span>
-                      </div>
-                      <div className="flex justify-between text-slate-400">
-                        <span>Work Authorization:</span> <span className="font-bold text-white text-right">{profile.work_authorization || "Not Specified"}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Right Column: Full details */}
-                  <div className="md:col-span-8 bg-slate-900/50 border border-white/5 rounded-3xl p-6 space-y-6">
-                    <div>
-                      <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3">Extracted Technology Stack</h4>
+                  
+                  {profile.previous_roles && profile.previous_roles.length > 0 && (
+                    <div className="space-y-3">
+                      <h4 className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Previous Roles</h4>
                       <div className="flex flex-wrap gap-2">
-                        {profile.skills?.map((s, idx) => (
-                          <span key={idx} className="px-2.5 py-1 bg-white/5 border border-white/10 text-slate-300 rounded font-medium">
-                            {s}
+                        {profile.previous_roles.map((r, idx) => (
+                          <span key={idx} className="px-2 py-0.5 bg-zinc-950 border border-zinc-850 text-slate-400">
+                            {r}
                           </span>
                         ))}
                       </div>
                     </div>
-                    
-                    {profile.projects && profile.projects.length > 0 && (
-                      <div>
-                        <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Projects</h4>
-                        <ul className="list-disc pl-4 space-y-1 text-slate-400">
-                          {profile.projects.map((p, idx) => (
-                            <li key={idx}>{p}</li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-                    
-                    {profile.previous_roles && profile.previous_roles.length > 0 && (
-                      <div>
-                        <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Previous Roles</h4>
-                        <div className="flex flex-wrap gap-2">
-                          {profile.previous_roles.map((r, idx) => (
-                            <span key={idx} className="px-2 py-0.5 bg-slate-800/80 text-slate-400 rounded-md border border-white/5">
-                              {r}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Education</h4>
-                        <ul className="list-disc pl-4 space-y-1 text-slate-400">
-                          {profile.education?.map((e, idx) => (
-                            <li key={idx}>{e}</li>
-                          ))}
-                        </ul>
-                      </div>
-                      <div>
-                        <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Target Preferences</h4>
-                        <div className="space-y-1 text-slate-400">
-                          <div>Commitment: <span className="text-white font-semibold">{profile.internship_or_fulltime}</span></div>
-                          <div>Work Mode: <span className="text-white font-semibold">{profile.remote_preference}</span></div>
-                        </div>
+                  )}
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <h4 className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Education Background</h4>
+                      <ul className="list-disc pl-4 space-y-1 text-slate-400">
+                        {profile.education?.map((e, idx) => (
+                          <li key={idx}>{e}</li>
+                        ))}
+                      </ul>
+                    </div>
+                    <div className="space-y-2">
+                      <h4 className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Candidate Target Settings</h4>
+                      <div className="space-y-1 text-slate-400">
+                        <div>Preference commitment: <span className="text-white font-bold">{profile.internship_or_fulltime}</span></div>
+                        <div>Target mode: <span className="text-white font-bold">{profile.remote_preference}</span></div>
                       </div>
                     </div>
                   </div>
                 </div>
-              ) : (
-                <div className="bg-slate-900/30 border border-white/5 rounded-3xl p-12 text-center text-slate-500 text-xs">
-                  Resume details empty. Upload your PDF resume in the header toolbar to trigger AI profiling.
+              </div>
+            ) : (
+              <div className="carbon-panel p-12 text-center space-y-6">
+                <div className="text-slate-500 text-xs">
+                  Resume details empty. Upload your resume (PDF, TXT, MD) in the sidebar toolbar, or paste it below to trigger AI profiling.
                 </div>
-              )}
-            </div>
+                <div className="max-w-2xl mx-auto space-y-4">
+                  <textarea 
+                    placeholder="Paste your raw resume text here..." 
+                    className="w-full h-48 bg-black/60 border border-zinc-850 p-4 focus:border-white outline-none text-xs text-white font-mono resize-none rounded-none"
+                    value={pastedResumeText}
+                    onChange={(e) => setPastedResumeText(e.target.value)}
+                  />
+                  <button 
+                    onClick={handleResumePaste}
+                    disabled={pasting || !pastedResumeText.trim()}
+                    className="px-6 py-3 bg-white text-black font-bold text-[9px] uppercase tracking-widest hover:bg-slate-200 transition-all disabled:opacity-50"
+                  >
+                    {pasting ? 'Analyzing...' : 'Analyze Pasted Resume'}
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </main>
+
+      {/* Paste Resume Modal (Glassmorphic Overlay) */}
+      {showPasteModal && (
+        <div className="fixed inset-0 bg-black/90 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+          <div className="bg-zinc-950 border border-zinc-800 max-w-2xl w-full p-8 space-y-6 shadow-2xl relative rounded-none">
+            <button 
+              onClick={() => setShowPasteModal(false)}
+              className="absolute top-6 right-6 text-slate-500 hover:text-white transition-all text-xl font-bold outline-none"
+            >
+              &times;
+            </button>
+            <div className="space-y-1">
+              <h3 className="text-lg font-bold text-white uppercase tracking-widest flex items-center gap-2">
+                Paste Resume Text
+              </h3>
+              <p className="text-xs text-slate-500">
+                Paste your resume raw details directly below. The system will parse them and update metrics.
+              </p>
+            </div>
+            
+            <textarea 
+              placeholder="Paste experiences, skills, and portfolio descriptions here..." 
+              className="w-full h-64 bg-black/60 border border-zinc-850 p-4 focus:border-white outline-none text-xs text-white font-mono resize-none rounded-none"
+              value={pastedResumeText}
+              onChange={(e) => setPastedResumeText(e.target.value)}
+            />
+            
+            <div className="flex gap-4 justify-end text-xs">
+              <button 
+                onClick={() => setShowPasteModal(false)}
+                className="px-5 py-3 border border-zinc-800 text-slate-400 hover:text-white uppercase tracking-widest font-bold transition-all"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={handleResumePaste}
+                disabled={pasting || !pastedResumeText.trim()}
+                className="px-6 py-3 bg-white text-black uppercase tracking-widest font-bold hover:bg-slate-200 transition-all disabled:opacity-50"
+              >
+                {pasting ? 'Analyzing...' : 'Analyze Resume'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

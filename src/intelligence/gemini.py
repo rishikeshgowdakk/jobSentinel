@@ -6,11 +6,14 @@ from src.core.logger import logger
 class GeminiAnalyzer:
     def __init__(self):
         self.client = None
-        if config.GEMINI_API_KEY:
+        api_key = config.GEMINI_API_KEY
+        if api_key and not api_key.startswith("your_") and api_key != "your_gemini_api_key":
             try:
-                self.client = genai.Client(api_key=config.GEMINI_API_KEY)
+                self.client = genai.Client(api_key=api_key)
             except Exception as e:
                 logger.error(f"Failed to initialize GenAI client: {e}")
+        else:
+            logger.warning("No valid Gemini API key detected. Running in local fallback mode.")
         self.model_name = 'gemini-1.5-flash'
 
     def get_embedding(self, text: str) -> list:
