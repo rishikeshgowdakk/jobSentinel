@@ -1,8 +1,7 @@
 import os
 import asyncio
-import fitz  # PyMuPDF
 import json
-from fastapi import FastAPI, UploadFile, File, BackgroundTasks, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, BackgroundTasks, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List
@@ -93,38 +92,7 @@ async def update_preferences(prefs: Preferences):
     db.set_setting("experience_level", prefs.experience_level)
     return {"status": "success", "message": "Preferences updated"}
 
-@app.post("/api/resume/upload")
-async def upload_resume(file: UploadFile = File(...)):
-    try:
-        if not file.filename.lower().endswith('.pdf'):
-            return {"status": "error", "message": "Only PDF files are supported"}
 
-        content = await file.read()
-        if not content:
-            return {"status": "error", "message": "Empty file uploaded"}
-        
-        temp_pdf = "temp_resume.pdf"
-        with open(temp_pdf, "wb") as f:
-            f.write(content)
-            
-        doc = fitz.open(temp_pdf)
-        text = ""
-        for page in doc:
-            text += page.get_text()
-        doc.close()
-        os.remove(temp_pdf)
-
-        if not text.strip():
-            return {"status": "error", "message": "Could not extract text from PDF"}
-
-        with open(config.MASTER_RESUME_PATH, "w") as f:
-            f.write(text)
-            
-        logger.info(f"Updated master resume from {file.filename}")
-        return {"status": "success", "message": "Resume updated successfully"}
-    except Exception as e:
-        logger.error(f"Upload error: {e}")
-        return {"status": "error", "message": str(e)}
 
 if __name__ == "__main__":
     import uvicorn
