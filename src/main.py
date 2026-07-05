@@ -1,23 +1,13 @@
 import asyncio
 import os
 import time
-import math
 from src.core.config import config
 from src.core.logger import logger
 from src.core.db import db
+from src.core.utils import calculate_cosine_similarity
 from src.scraper.engine import JobScraper
 from src.intelligence.gemini import GeminiAnalyzer
 from src.notify.email_client import EmailClient
-
-def calculate_cosine_similarity(v1, v2):
-    if not v1 or not v2:
-        return 0.0
-    dot_product = sum(x*y for x, y in zip(v1, v2))
-    magnitude1 = math.sqrt(sum(x*x for x in v1))
-    magnitude2 = math.sqrt(sum(x*x for x in v2))
-    if not magnitude1 or not magnitude2:
-        return 0.0
-    return dot_product / (magnitude1 * magnitude2)
 
 async def run_scanner(broadcast_callback=None):
     logger.info("Initializing JobSentinel Autonomous Agent Loop...")
@@ -114,6 +104,25 @@ async def run_scanner(broadcast_callback=None):
                             combined_score = int(0.25 * (vector_sim * 100) + 0.75 * semantic_score)
                             combined_score = min(max(combined_score, 0), 100)
                             
+                            # STRICT ZERO-TOLERANCE ATS FILTERING
+                            target_jtype = prefs.get("job_type", "All")
+                            target_elevel = prefs.get("experience_level", "All")
+                            title_lower = job['title'].lower()
+                            
+                            if target_jtype == "I" and "intern" not in title_lower and "trainee" not in title_lower:
+                                combined_score = 0
+                                match_analysis['recommendationReason'] = "ATS Rejected: Does not match Internship requirement."
+                            elif target_jtype == "F" and ("intern" in title_lower or "trainee" in title_lower):
+                                combined_score = 0
+                                match_analysis['recommendationReason'] = "ATS Rejected: Looks like an internship, but full-time requested."
+                                
+                            if target_elevel == "2" and ("senior" in title_lower or "staff" in title_lower or "principal" in title_lower or "lead" in title_lower or "manager" in title_lower or "sde 3" in title_lower or "sde 4" in title_lower):
+                                combined_score = 0
+                                match_analysis['recommendationReason'] = "ATS Rejected: Too senior for your Entry/Junior preference."
+                            elif target_elevel == "4" and ("intern" in title_lower or "junior" in title_lower or "fresher" in title_lower or "entry" in title_lower):
+                                combined_score = 0
+                                match_analysis['recommendationReason'] = "ATS Rejected: Too junior for your Senior preference."
+                            
                             match_analysis['matchScore'] = combined_score
                             match_analysis['job_id'] = job['job_id']
                         else:
@@ -135,11 +144,7 @@ async def run_scanner(broadcast_callback=None):
                         # Trigger notification if Match Score >= 80 for this user
                         if match_analysis.get('matchScore', 0) >= 80:
                             # Send notifications using user details if available
-                            user_email = p.get("structured_data", {}).get("email")
-                            if user_email:
-                                email_client.send_notification(job, match_analysis, recipient_email=user_email)
-                            else:
-                                email_client.send_notification(job, match_analysis)
+                            email_client.send_notification(job, match_analysis)
                         
                         # Broadcast new job discovery to this user's socket connections
                         if broadcast_callback:

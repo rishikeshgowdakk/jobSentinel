@@ -1,66 +1,162 @@
-# JobSentinel: AI Job Intelligence & Opportunity Agent
+# JobSentinel
 
-JobSentinel is a production-grade autonomous agent that monitors newly posted software engineering jobs across public platforms, performs semantic profile evaluations, and serves career advancement recommendations to candidates.
+An AI-powered job search agent that parses your resume, scrapes real-time job listings from LinkedIn, Naukri, and ATS platforms, and ranks them by compatibility using Gemini AI semantic matching.
 
-## 🚀 Key Features
-
-*   **Autonomous Resume Parsing:** Ingests resume PDFs, extracting 23 parsed metadata dimensions (identity, frameworks, AI/ML tools, databases, projects, seniority) using the Gemini API.
-*   **Semantic Similarity Engine:** Performs dense vector similarity matching (`text-embedding-004`) combined with LLM context checks to calculate job compatibility scores (0–100%).
-*   **WAF-Resilient Scraper:** Uses headful Playwright browsers with custom user agents and webdriver overrides to aggregate jobs posted within the last 24 hours from LinkedIn and Naukri.
-*   **Career Growth Pathing:** Analyzes aggregate market demands to generate up-skilling roadmaps (recommending courses, certifications, and portfolio projects) and resume improvements.
-*   **Responsive HTML Alerts:** Notifies candidates immediately via styled HTML emails when match compatibility exceeds 80%.
-*   **Glassmorphic React Dashboard:** Hosts tabs for live discoveries, custom skill paths, resume critiques, parsed profile fields, and system telemetry streams.
+Upload your resume → AI extracts your skills → Background agent scrapes the web → Jobs ranked by match score → Real-time updates via WebSocket.
 
 ---
 
-## 📋 Prerequisites
+## Features
 
-*   Python 3.10+
-*   Node.js & npm
-*   Google Gemini API Key (stored in `.env`)
-*   SMTP credentials (optional, for email alerts)
-
----
-
-## 🛠️ Quick Start
-
-### 1. Backend API & Scanner Setup
-1. Clone the repository and install requirements:
-   ```bash
-   pip install -r requirements.txt
-   playwright install chromium
-   ```
-2. Configure your environment variables:
-   ```bash
-   cp .env.example .env
-   # Add your GEMINI_API_KEY and SMTP credentials
-   ```
-3. Run the FastAPI backend:
-   ```bash
-   python -m src.api
-   ```
-   The backend will connect to SQLite (`jobsentinel.db`), start the scanner, and expose endpoints at [http://localhost:8000](http://localhost:8000).
-
-### 2. Frontend Dashboard Setup
-1. Navigate to the `frontend/` directory and install assets:
-   ```bash
-   cd frontend
-   npm install
-   ```
-2. Launch the React server:
-   ```bash
-   npm run dev
-   ```
-   Open [http://localhost:5173/](http://localhost:5173/) to view the agent dashboard.
+- **Resume Parsing** — Upload a PDF or paste raw text. Gemini AI extracts skills, experience, education, and preferences into structured data.
+- **Live Job Scraping** — Autonomous scraper searches LinkedIn, Naukri, and DuckDuckGo X-Ray (Greenhouse/Lever ATS boards) on a configurable interval.
+- **Semantic Matching** — Each job is scored 0–100 using a weighted combination of cosine embedding similarity (25%) and Gemini semantic analysis (75%).
+- **ATS Filtering** — Strict zero-tolerance filtering for job type (intern/full-time) and seniority level mismatches.
+- **Skills Gap Analysis** — AI identifies missing skills from job requirements and recommends courses, projects, and certifications.
+- **Resume Critique** — ATS optimization suggestions: missing keywords, formatting improvements, project enhancements.
+- **Real-Time Updates** — WebSocket pushes new job discoveries and scanner logs to the browser instantly.
+- **Multi-User** — Each browser session gets a unique ID with isolated profiles, preferences, and match results.
+- **Dark/Light Mode** — Full theme support with a monochrome glassmorphic design system.
+- **Email Alerts** — Optional SMTP notifications when a job scores ≥ 80% match.
 
 ---
 
-## 📂 Project Structure
+## Architecture
 
-*   `src/api.py`: FastAPI backend routing (resume upload, analytics, critiques, market insights).
-*   `src/main.py`: Scanner coordinating scrapers, vector similarity scoring, and email notifications.
-*   `src/scraper/engine.py`: Playwright web scrapers for LinkedIn and Naukri, and mock job injector.
-*   `src/intelligence/gemini.py`: Gemini client operations (resume parameters, embeddings, semantic matches, up-skill plan).
-*   `src/core/db.py`: SQLite database models and auto-migration pipelines.
-*   `src/notify/email_client.py`: HTML opportunity notifier.
-*   `frontend/src/App.jsx`: Dark glassmorphic user dashboard.
+```
+┌─────────────────────────────────────────────────────────┐
+│                    React Frontend (Vite)                 │
+│  Upload CV → Dashboard → Job Feed → Skills → Profile    │
+└──────────────────────┬──────────────────────────────────┘
+                       │ REST + WebSocket
+┌──────────────────────▼──────────────────────────────────┐
+│                   FastAPI Backend                        │
+│  Resume Parser · Job API · Preferences · Analytics      │
+├─────────────────────────────────────────────────────────┤
+│  Scanner Loop (async)         │  Gemini AI Engine       │
+│  LinkedIn · Naukri · X-Ray    │  Embeddings · Matching  │
+├─────────────────────────────────────────────────────────┤
+│              SQLite / PostgreSQL Database                │
+│  Users · Jobs · Matches · Applications · Settings       │
+└─────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Quick Start
+
+### Prerequisites
+
+- Python 3.10+
+- Node.js 18+
+- A [Gemini API Key](https://aistudio.google.com/apikey)
+
+### 1. Clone and setup
+
+```bash
+git clone https://github.com/rishikeshgowdakk/jobSentinel.git
+cd jobSentinel
+
+# Create virtual environment
+python -m venv venv
+source venv/bin/activate  # Windows: venv\Scripts\activate
+
+# Install Python dependencies
+pip install -r requirements.txt
+
+# Install Playwright browsers
+playwright install chromium
+```
+
+### 2. Configure environment
+
+```bash
+cp .env.example .env
+# Edit .env and add your GEMINI_API_KEY
+```
+
+### 3. Build the frontend
+
+```bash
+cd frontend
+npm install
+npm run build
+cd ..
+```
+
+### 4. Run
+
+```bash
+uvicorn src.api:app --host 0.0.0.0 --port 8000
+```
+
+Open [http://localhost:8000](http://localhost:8000) — the frontend is served as static files from the API.
+
+---
+
+## Development
+
+For frontend hot-reload during development:
+
+```bash
+# Terminal 1 — Backend
+uvicorn src.api:app --host 0.0.0.0 --port 8000 --reload
+
+# Terminal 2 — Frontend dev server (proxies API to :8000)
+cd frontend
+npm run dev
+```
+
+The Vite dev server proxies `/api` requests to the backend automatically.
+
+---
+
+## Docker
+
+```bash
+# Build the frontend first
+cd frontend && npm install && npm run build && cd ..
+
+# Build and run
+docker build -t jobsentinel .
+docker run -p 8000:8000 --env-file .env jobsentinel
+```
+
+---
+
+## Tech Stack
+
+| Layer | Technology |
+|-------|-----------|
+| Frontend | React 19, Vite, Tailwind CSS |
+| Backend | FastAPI, Uvicorn |
+| AI | Gemini 2.0 Flash, Gemini Embeddings |
+| Scraping | Playwright (headless Chromium) |
+| Database | SQLite (default) / PostgreSQL |
+| PDF Parsing | PyMuPDF |
+
+---
+
+## How It Works
+
+1. **Upload** — Your resume (PDF/TXT/MD) is parsed by Gemini AI into structured fields: name, skills, experience, education, target role, etc.
+
+2. **Configure** — Set job keywords, preferred locations, job type (intern/full-time), and seniority level. Or let the AI auto-tune keywords from your resume.
+
+3. **Scan** — The background scanner runs on a loop, searching across platforms using your preferences. Jobs are deduplicated and stored globally.
+
+4. **Match** — Each job is evaluated against your profile using both vector embeddings (cosine similarity) and LLM semantic analysis. A combined score of 0–100 is calculated.
+
+5. **Filter** — ATS-style strict filtering removes mismatches (e.g., senior roles when you selected intern-level).
+
+6. **Display** — Jobs appear in your feed sorted by match score. Real-time WebSocket pushes new discoveries as they're found.
+
+---
+
+## License
+
+MIT
+
+---
+
+Built by [Rishikesh Gowda KK](https://github.com/rishikeshgowdakk)

@@ -31,7 +31,7 @@ class EmailClient:
         html_body = f"""
         <html>
         <body style="font-family: Arial, sans-serif; background-color: #f4f4f5; color: #1f2937; margin: 0; padding: 20px;">
-            <table align="center" border="0" cellpadding="0" cellspacing="0" width="600" style="background-color: #ffffff; border-radius: 8px; border: 1px style solid #e4e4e7; box-shadow: 0 4px 6px rgba(0,0,0,0.05); overflow: hidden;">
+            <table align="center" border="0" cellpadding="0" cellspacing="0" width="600" style="background-color: #ffffff; border-radius: 8px; border: 1px solid #e4e4e7; box-shadow: 0 4px 6px rgba(0,0,0,0.05); overflow: hidden;">
                 <!-- Header -->
                 <tr>
                     <td style="background-color: #2563eb; color: #ffffff; padding: 30px; text-align: center;">

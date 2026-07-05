@@ -1,11 +1,9 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { 
-  Activity, RefreshCw, Settings, Terminal, Briefcase, 
-  Upload, BookOpen, Sparkles, LineChart, CheckCircle,
-  Bookmark, ChevronRight, TrendingUp, Award, Clock, 
-  User, Check, Phone, Mail, MapPin, AlertCircle,
-  Moon, Sun, Search, Plus, ArrowUpRight
+  Activity, RefreshCw, Sparkles, BookOpen, Award,
+  User, Check, Phone, Mail, MapPin, Search,
+  ArrowUpRight, Bookmark, ChevronRight
 } from 'lucide-react';
 
 // Initialize or retrieve unique local user session
@@ -25,10 +23,7 @@ function App() {
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(false);
   const [theme, setTheme] = useState(localStorage.getItem('theme') || 'dark');
-  
-  // Payment check states
-  const [pendingFile, setPendingFile] = useState(null);
-  const [pendingPasteText, setPendingPasteText] = useState('');
+
 
   
   // Analytics and profile state
@@ -54,9 +49,7 @@ function App() {
   const [message, setMessage] = useState('');
   const [isError, setIsError] = useState(false);
   
-  // WebSocket console logs
-  const [logs, setLogs] = useState([]);
-  const logEndRef = useRef(null);
+
 
   // Auto-scrolling AI Insights
   const [insightIndex, setInsightIndex] = useState(0);
@@ -157,9 +150,7 @@ function App() {
     const ws = new WebSocket(WS_BASE);
     ws.onmessage = (event) => {
       const data = JSON.parse(event.data);
-      if (data.type === 'log') {
-        setLogs(prev => [...prev.slice(-49), data.message]);
-      } else if (data.type === 'new_job') {
+      if (data.type === 'new_job') {
         setJobs(prev => [data.data, ...prev]);
         fetchAnalytics(); // Refresh counters
       }
@@ -167,9 +158,7 @@ function App() {
     return () => ws.close();
   }, []);
 
-  useEffect(() => {
-    logEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [logs]);
+
 
   useEffect(() => {
     document.documentElement.className = theme;
@@ -478,14 +467,7 @@ function App() {
                 <h2 className="text-2xl font-black uppercase tracking-wider text-slate-800 dark:text-white">System Telemetry</h2>
               </div>
               <div className="flex items-center gap-3 w-full md:w-auto justify-end">
-                <div className="relative">
-                  <select className="bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800/80 text-xs px-3.5 py-2 rounded-xl text-slate-700 dark:text-slate-300 pr-8 appearance-none cursor-pointer">
-                    <option>This Month</option>
-                    <option>Last 30 Days</option>
-                    <option>All-Time</option>
-                  </select>
-                  <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-500 text-[10px]">&#9662;</div>
-                </div>
+
                 <button 
                   onClick={() => {
                     document.getElementById('hunt-config-section')?.scrollIntoView({ behavior: 'smooth' });
@@ -575,90 +557,11 @@ function App() {
 
             </div>
 
-            {/* ROW 2: Recent Discoveries (Transactions layout) & Career Splits (Spending Layout) */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8">
-              
-              {/* Left Side: Recent Discoveries (2/3 width) */}
-              <div className="lg:col-span-12 carbon-panel p-7 space-y-6 flex flex-col justify-between min-h-[380px]">
-                <div className="flex justify-between items-center border-b border-slate-200 dark:border-slate-900/60 pb-4">
-                  <div>
-                    <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
-                      Scan Results
-                    </span>
-                    <h3 className="text-sm font-bold text-slate-800 dark:text-white tracking-wide">Recent Discoveries</h3>
-                  </div>
-                  <button 
-                    onClick={() => {
-                      setPipelineFilter('All');
-                      setActiveTab('jobs');
-                      window.scrollTo({ top: 0, behavior: 'smooth' });
-                    }}
-                    className="text-[10px] font-bold text-black dark:text-white hover:text-slate-700 dark:hover:text-slate-300 uppercase tracking-wider flex items-center gap-1 transition-colors cursor-pointer"
-                  >
-                    <span>View All</span>
-                    <ChevronRight size={12} />
-                  </button>
-                </div>
-                
-                <div className="flex-grow overflow-y-auto space-y-3 pr-1 max-h-[260px] scrollbar-thin">
-                  {filteredJobs.slice(0, 5).map((job, idx) => {
-                    // Pick a clean, monochrome gradient for company logo placeholder
-                    const grads = [
-                      'from-slate-800 to-slate-900 dark:from-slate-200 dark:to-slate-400',
-                      'from-neutral-700 to-neutral-900 dark:from-neutral-300 dark:to-neutral-500',
-                      'from-gray-700 to-gray-900 dark:from-gray-300 dark:to-gray-500',
-                      'from-zinc-700 to-zinc-900 dark:from-zinc-300 dark:to-zinc-500',
-                      'from-stone-700 to-stone-900 dark:from-stone-300 dark:to-stone-500'
-                    ];
-                    const grad = grads[idx % grads.length];
-                    
-                    return (
-                      <div 
-                        key={job.job_id} 
-                        onClick={() => window.open(job.url, '_blank')}
-                        className="flex items-center justify-between p-3.5 bg-slate-100/50 dark:bg-slate-900/20 border border-slate-200 dark:border-slate-900/40 rounded-2xl hover:bg-slate-200/50 dark:hover:bg-slate-900/40 transition-all duration-300 cursor-pointer"
-                      >
-                        <div className="flex items-center gap-3.5 min-w-0">
-                          {/* Logo Badge */}
-                          <div className={`w-10 h-10 rounded-xl bg-gradient-to-tr ${grad} flex items-center justify-center text-white dark:text-slate-900 font-black text-xs shrink-0 shadow-md`}>
-                            {job.company ? job.company.slice(0, 2).toUpperCase() : 'JB'}
-                          </div>
-                          <div className="min-w-0">
-                            <h4 className="text-xs font-bold text-slate-800 dark:text-white truncate max-w-[180px] lg:max-w-[240px]">
-                              {job.title}
-                            </h4>
-                            <p className="text-[10px] text-slate-500 font-medium tracking-wide">
-                              {job.company} &bull; <span className="text-slate-900/70 dark:text-slate-300/70">{job.source}</span>
-                            </p>
-                          </div>
-                        </div>
-                        
-                        <div className="flex items-center gap-6 shrink-0">
-                          <span className="hidden md:inline text-[10px] text-slate-500 font-mono">
-                            {job.location || 'Remote'}
-                          </span>
-                          <span className="text-[10px] text-slate-400 font-medium">
-                            {job.experience ? job.experience.split(' ')[0] : 'Experienced'}
-                          </span>
-                        </div>
-                      </div>
-                    );
-                  })}
-                  {jobs.length === 0 && (
-                    <div className="flex flex-col items-center justify-center py-12 text-slate-500">
-                      <Briefcase size={24} className="text-slate-700 mb-2" />
-                      <span className="text-xs font-light">No crawled positions logged in database yet.</span>
-                    </div>
-                  )}
-                </div>
-              </div>
 
-            </div>
 
-            {/* ROW 3: Config Panel & Real-time Logs Console */}
-            <div id="hunt-config-section" className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8">
-              
-              {/* Config Form (1/2 width) */}
+
+            {/* ROW 3: Config Panel */}
+            <div id="hunt-config-section" className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 mt-8">
               <div className="lg:col-span-12 carbon-panel p-7 space-y-6">
                 <div>
                   <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider block mb-1">01 . Config</span>
@@ -696,14 +599,13 @@ function App() {
                     </div>
                   </div>
 
-                  <button onClick={savePreferences} disabled={savingPrefs} className="w-full py-3 bg-black dark:bg-white hover:bg-neutral-800 dark:hover:bg-slate-200 text-white dark:text-slate-950 font-bold text-[10px] uppercase tracking-widest rounded-xl transition-all duration-300 hover:-translate-y-0.5 active:translate-y-0 cursor-pointer mt-2 shadow-md">
-                    {savingPrefs ? 'Syncing Parameters...' : 'Save Configuration'}
+                  <button onClick={savePreferences} disabled={savingPrefs} className="w-full py-3 bg-black dark:bg-white hover:bg-neutral-800 dark:hover:bg-slate-200 text-white dark:text-slate-950 font-bold text-[10px] uppercase tracking-widest rounded-xl transition-all duration-300 hover:-translate-y-0.5 active:translate-y-0 cursor-pointer mt-2 shadow-md flex items-center justify-center gap-2">
+                    <Search size={14} />
+                    <span>{savingPrefs ? 'Scanning Web...' : 'Live Web Search'}</span>
                   </button>
                 </div>
               </div>
-
             </div>
-
 
           </div>
         )}
@@ -733,71 +635,56 @@ function App() {
               {/* Filters sidebar */}
               <div className="xl:col-span-3 space-y-6">
                 <div className="carbon-panel p-6 space-y-6 sticky top-6">
-                  <h3 className="text-xs font-bold uppercase tracking-widest text-slate-800 dark:text-white border-b border-slate-200 dark:border-slate-900/60 pb-3">Filter Results</h3>
+                  <h3 className="text-xs font-bold uppercase tracking-widest text-slate-800 dark:text-white border-b border-slate-200 dark:border-slate-900/60 pb-3">Live Web Search</h3>
                   
-                  <div className="space-y-5 text-xs">
+                  <div className="space-y-4 text-xs">
                     <div className="space-y-1.5">
-                      <label className="text-[9px] font-bold text-slate-400 uppercase tracking-widest pl-0.5">Query</label>
-                      <div className="relative">
-                        <input 
-                          type="text" 
-                          value={filterKeyword} 
-                          onChange={(e) => setFilterKeyword(e.target.value)} 
-                          onKeyDown={(e) => { if (e.key === 'Enter') window.scrollTo({ top: 0, behavior: 'smooth' }) }}
-                          placeholder="Title, Company, Skills..."
-                          className="w-full bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800/80 p-2.5 pr-10 focus:border-neutral-500 outline-none text-slate-800 dark:text-white text-xs rounded-xl" 
-                        />
-                        <button 
-                          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-800 dark:hover:text-white transition-colors cursor-pointer"
-                        >
-                          <Search size={14} />
-                        </button>
-                      </div>
+                      <label className="text-[9px] font-bold text-slate-400 uppercase tracking-widest pl-0.5">Job Keywords</label>
+                      <input type="text" value={keywords} onChange={(e) => setKeywords(e.target.value)} placeholder="e.g. SDE, Python, React" className="w-full bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800/80 p-2.5 focus:border-neutral-500 outline-none text-slate-800 dark:text-white text-xs rounded-xl" />
                     </div>
+                    
                     <div className="space-y-1.5">
-                      <label className="text-[9px] font-bold text-slate-400 uppercase tracking-widest pl-0.5">Location Mode</label>
-                      <select value={filterRemote} onChange={(e) => setFilterRemote(e.target.value)} className="w-full bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800/80 p-2.5 focus:border-neutral-500 outline-none text-slate-800 dark:text-slate-200 text-xs rounded-xl">
-                        <option value="All">All Locations</option>
-                        <option value="Remote">Remote Only</option>
-                        <option value="Onsite">Onsite Only</option>
-                        <option value="Hybrid">Hybrid Only</option>
+                      <label className="text-[9px] font-bold text-slate-400 uppercase tracking-widest pl-0.5">Preferred Locations</label>
+                      <input type="text" value={locations} onChange={(e) => setLocations(e.target.value)} placeholder="e.g. Remote, India" className="w-full bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800/80 p-2.5 focus:border-neutral-500 outline-none text-slate-800 dark:text-white text-xs rounded-xl" />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="text-[9px] font-bold text-slate-400 uppercase tracking-widest pl-0.5">Job Commitment</label>
+                      <select value={jobType} onChange={(e) => setJobType(e.target.value)} className="w-full bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800/80 p-2.5 focus:border-neutral-500 outline-none text-slate-800 dark:text-slate-200 text-xs rounded-xl">
+                        <option value="All">All Commitments</option>
+                        <option value="F">Full-time Only</option>
+                        <option value="P">Part-time Only</option>
+                        <option value="I">Internships Only</option>
                       </select>
                     </div>
+
                     <div className="space-y-1.5">
-                      <label className="text-[9px] font-bold text-slate-400 uppercase tracking-widest pl-0.5">Source</label>
-                      <select value={filterSource} onChange={(e) => setFilterSource(e.target.value)} className="w-full bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800/80 p-2.5 focus:border-neutral-500 outline-none text-slate-800 dark:text-slate-200 text-xs rounded-xl">
-                        <option value="All">All Sources</option>
-                        <option value="LinkedIn">LinkedIn</option>
-                        <option value="Naukri">Naukri</option>
-                        <option value="Wellfound">Wellfound</option>
-                        <option value="YC Jobs">YC Jobs</option>
+                      <label className="text-[9px] font-bold text-slate-400 uppercase tracking-widest pl-0.5">Experience</label>
+                      <select value={expLevel} onChange={(e) => setExpLevel(e.target.value)} className="w-full bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800/80 p-2.5 focus:border-neutral-500 outline-none text-slate-800 dark:text-slate-200 text-xs rounded-xl">
+                        <option value="All">All Seniorities</option>
+                        <option value="2">Intern / Associate</option>
+                        <option value="4">Experienced / Senior</option>
                       </select>
                     </div>
-                    <div className="space-y-2">
+
+                    {/* Local UI Filter */}
+                    <div className="space-y-2 pt-4 border-t border-slate-200 dark:border-slate-900/60 mt-4">
                       <div className="flex justify-between items-center mb-1">
                         <label className="text-[9px] font-bold text-slate-400 uppercase tracking-widest pl-0.5">Min Match Score</label>
                         <span className="font-mono text-black dark:text-white font-bold">{filterMinScore}%</span>
                       </div>
                       <input 
-                        type="range" 
-                        min="0" 
-                        max="100" 
+                        type="range" min="0" max="100" 
                         value={filterMinScore} 
                         onChange={(e) => setFilterMinScore(Number(e.target.value))} 
                         className="w-full accent-black dark:accent-white bg-slate-200 dark:bg-slate-900" 
                       />
                     </div>
-                    
-                    <div className="pt-2">
-                      <button 
-                        onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-                        className="w-full py-3 bg-black dark:bg-white hover:bg-neutral-800 dark:hover:bg-slate-200 text-white dark:text-slate-950 font-bold text-[10px] uppercase tracking-widest rounded-xl transition-all duration-300 hover:-translate-y-0.5 shadow-md flex items-center justify-center gap-2 cursor-pointer"
-                      >
-                        <Search size={14} />
-                        <span>Search</span>
-                      </button>
-                    </div>
+
+                    <button onClick={savePreferences} disabled={savingPrefs} className="w-full py-3 bg-black dark:bg-white hover:bg-neutral-800 dark:hover:bg-slate-200 text-white dark:text-slate-950 font-bold text-[10px] uppercase tracking-widest rounded-xl transition-all duration-300 hover:-translate-y-0.5 active:translate-y-0 cursor-pointer mt-4 shadow-md flex items-center justify-center gap-2">
+                      <Search size={14} />
+                      <span>{savingPrefs ? 'Scanning Web...' : 'Live Web Search'}</span>
+                    </button>
                   </div>
                 </div>
               </div>

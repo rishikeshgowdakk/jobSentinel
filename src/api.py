@@ -1,10 +1,8 @@
 import os
 import asyncio
 import json
-import math
-import re
 import fitz  # PyMuPDF
-from fastapi import FastAPI, UploadFile, File, BackgroundTasks, WebSocket, WebSocketDisconnect, Request, Form
+from fastapi import FastAPI, UploadFile, File, BackgroundTasks, WebSocket, WebSocketDisconnect, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List
@@ -27,18 +25,8 @@ class JobStatusUpdate(BaseModel):
 
 class PasteResume(BaseModel):
     text: str
-    utr: str = ""
 
-# Helper to calculate cosine similarity for local backfill evaluations
-def calculate_cosine_similarity(v1, v2):
-    if not v1 or not v2:
-        return 0.0
-    dot_product = sum(x*y for x, y in zip(v1, v2))
-    magnitude1 = math.sqrt(sum(x*x for x in v1))
-    magnitude2 = math.sqrt(sum(x*x for x in v2))
-    if not magnitude1 or not magnitude2:
-        return 0.0
-    return dot_product / (magnitude1 * magnitude2)
+from src.core.utils import calculate_cosine_similarity
 
 # Extract user_id from custom header X-User-ID or fallback
 def get_user_id(request: Request) -> str:
@@ -200,18 +188,10 @@ async def update_preferences(prefs: Preferences, request: Request):
     return {"status": "success", "message": "Preferences updated"}
 
 @app.post("/api/resume/upload")
-async def upload_resume(background_tasks: BackgroundTasks, request: Request, file: UploadFile = File(...), utr: str = Form("")):
+async def upload_resume(background_tasks: BackgroundTasks, request: Request, file: UploadFile = File(...)):
     try:
         user_id = get_user_id(request)
         
-        # Clean and validate UPI transaction UTR format
-        utr_clean = utr.strip()
-        if utr_clean:
-            if not re.match(r'^\d{12}$', utr_clean):
-                return {"status": "error", "message": "Invalid UTR format. UTR must be a 12-digit number."}
-                
-            if db.is_utr_used(utr_clean):
-                return {"status": "error", "message": "This transaction reference (UTR) has already been used."}
         filename = file.filename.lower()
         if not filename.endswith(('.pdf', '.txt', '.md')):
             return {"status": "error", "message": "Only PDF, TXT, and MD files are supported"}
@@ -255,9 +235,6 @@ async def upload_resume(background_tasks: BackgroundTasks, request: Request, fil
         logger.info(f"Generating semantic embeddings for resume of user {user_id}...")
         embedding = analyzer.get_embedding(text)
         
-        # Save payment transaction to prevent double spending
-        if utr_clean:
-            db.save_payment(utr_clean, user_id, 1.0)
         
         # Save to database
         db.save_profile(user_id, text, structured_data, embedding)
@@ -275,14 +252,6 @@ async def paste_resume(req: PasteResume, background_tasks: BackgroundTasks, requ
     try:
         user_id = get_user_id(request)
         
-        # Clean and validate UPI transaction UTR format
-        utr_clean = req.utr.strip()
-        if utr_clean:
-            if not re.match(r'^\d{12}$', utr_clean):
-                return {"status": "error", "message": "Invalid UTR format. UTR must be a 12-digit number."}
-                
-            if db.is_utr_used(utr_clean):
-                return {"status": "error", "message": "This transaction reference (UTR) has already been used."}
         text = req.text
         if not text or not text.strip():
             return {"status": "error", "message": "Empty resume text provided"}
@@ -306,9 +275,6 @@ async def paste_resume(req: PasteResume, background_tasks: BackgroundTasks, requ
         logger.info(f"Generating semantic embeddings for pasted resume of user {user_id}...")
         embedding = analyzer.get_embedding(text)
         
-        # Save payment transaction to prevent double spending
-        if utr_clean:
-            db.save_payment(utr_clean, user_id, 1.0)
         
         # Save to database
         db.save_profile(user_id, text, structured_data, embedding)

@@ -218,7 +218,8 @@ class Database:
     def get_profile(self, user_id: str) -> dict:
         try:
             cur = self.conn.cursor()
-            cur.execute("SELECT raw_text, structured_data, embedding FROM resume_profile WHERE user_id = ?", (user_id,))
+            query = "SELECT raw_text, structured_data, embedding FROM resume_profile WHERE user_id = ?" if self.is_sqlite else "SELECT raw_text, structured_data, embedding FROM resume_profile WHERE user_id = %s"
+            cur.execute(query, (user_id,))
             row = cur.fetchone()
             cur.close()
             if row:
@@ -478,6 +479,12 @@ class Database:
             JOIN processed_jobs j ON a.job_id = j.job_id
             WHERE a.user_id = ?
             ORDER BY a.applied_at DESC
+        """ if self.is_sqlite else """
+            SELECT a.job_id, a.status, a.applied_at, j.title, j.company, j.source
+            FROM applications a
+            JOIN processed_jobs j ON a.job_id = j.job_id
+            WHERE a.user_id = %s
+            ORDER BY a.applied_at DESC
         """
         try:
             cur = self.conn.cursor()
@@ -503,10 +510,11 @@ class Database:
     def delete_profile(self, user_id: str):
         try:
             cur = self.conn.cursor()
-            cur.execute("DELETE FROM resume_profile WHERE user_id = ?", (user_id,))
-            cur.execute("DELETE FROM settings WHERE user_id = ?", (user_id,))
-            cur.execute("DELETE FROM job_matches WHERE user_id = ?", (user_id,))
-            cur.execute("DELETE FROM applications WHERE user_id = ?", (user_id,))
+            ph = "?" if self.is_sqlite else "%s"
+            cur.execute(f"DELETE FROM resume_profile WHERE user_id = {ph}", (user_id,))
+            cur.execute(f"DELETE FROM settings WHERE user_id = {ph}", (user_id,))
+            cur.execute(f"DELETE FROM job_matches WHERE user_id = {ph}", (user_id,))
+            cur.execute(f"DELETE FROM applications WHERE user_id = {ph}", (user_id,))
             self.conn.commit()
             cur.close()
             logger.info(f"Resume profile and related data deleted successfully for user {user_id}.")
@@ -516,7 +524,7 @@ class Database:
                 self.conn.rollback()
 
     def save_payment(self, utr: str, user_id: str, amount: float, status: str = "completed") -> bool:
-        query = "INSERT INTO payments (utr, user_id, amount, status) VALUES (?, ?, ?, ?)"
+        query = "INSERT INTO payments (utr, user_id, amount, status) VALUES (?, ?, ?, ?)" if self.is_sqlite else "INSERT INTO payments (utr, user_id, amount, status) VALUES (%s, %s, %s, %s)"
         try:
             cur = self.conn.cursor()
             cur.execute(query, (utr, user_id, amount, status))
@@ -533,7 +541,8 @@ class Database:
     def is_utr_used(self, utr: str) -> bool:
         try:
             cur = self.conn.cursor()
-            cur.execute("SELECT 1 FROM payments WHERE utr = ?", (utr,))
+            query = "SELECT 1 FROM payments WHERE utr = ?" if self.is_sqlite else "SELECT 1 FROM payments WHERE utr = %s"
+            cur.execute(query, (utr,))
             row = cur.fetchone()
             cur.close()
             return row is not None
