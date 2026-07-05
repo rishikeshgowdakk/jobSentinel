@@ -2,56 +2,265 @@
 @tailwind components;
 @tailwind utilities;
 
-@layer base {
-  body {
-    background-image: linear-gradient(rgba(10, 10, 10, 0.94), rgba(6, 6, 6, 0.97)), url('/bg-texture.png');
-    background-repeat: repeat;
-    font-family: 'Inter', sans-serif;
-    @apply text-slate-400 min-h-screen selection:bg-white/10 selection:text-white antialiased;
-  }
-
-  h1, h2, h3, h4, h5, h6 {
-    font-family: 'Space Grotesk', sans-serif;
-  }
+/* CSS Variables for Monochrome Light and Dark Theme */
+:root {
+  --transition-speed: 0.3s;
 }
 
-/* Custom Scrollbar */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-::-webkit-scrollbar-track {
-  background: rgba(0, 0, 0, 0.2);
-}
-::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 3px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.2);
+/* Base body styles */
+body {
+  font-family: 'Inter', sans-serif;
+  min-height: 100vh;
+  margin: 0;
+  transition: background-color var(--transition-speed), color var(--transition-speed);
 }
 
-/* Custom carbon panel styling */
-.carbon-panel {
-  background: rgba(13, 13, 13, 0.85);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(10px);
-  border-radius: 0px; /* Minimalist sharp corners */
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Space Grotesk', sans-serif;
 }
 
-/* Minimalist thin borders and styling matching the concept image */
-.border-carbon {
+/* Dark Mode Color Palette */
+.dark body {
+  background-color: #090909;
+  background-image: 
+    radial-gradient(circle at 10% 20%, rgba(255, 255, 255, 0.02) 0%, transparent 40%),
+    radial-gradient(circle at 90% 80%, rgba(255, 255, 255, 0.01) 0%, transparent 50%),
+    linear-gradient(rgba(255, 255, 255, 0.005) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.005) 1px, transparent 1px);
+  background-size: 100% 100%, 100% 100%, 40px 40px, 40px 40px;
+  color: #d4d4d4;
+  @apply selection:bg-white/10 selection:text-white antialiased overflow-x-hidden;
+}
+
+/* Light Mode Color Palette */
+.light body {
+  background-color: #f7f7f7;
+  background-image: 
+    radial-gradient(circle at 10% 20%, rgba(0, 0, 0, 0.015) 0%, transparent 40%),
+    radial-gradient(circle at 90% 80%, rgba(0, 0, 0, 0.01) 0%, transparent 50%),
+    linear-gradient(rgba(0, 0, 0, 0.008) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 0, 0, 0.008) 1px, transparent 1px);
+  background-size: 100% 100%, 100% 100%, 40px 40px, 40px 40px;
+  color: #1a1a1a;
+  @apply selection:bg-black/10 selection:text-black antialiased overflow-x-hidden;
+}
+
+/* Custom Scrollbar matching monochrome dashboard */
+.dark ::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.3);
+}
+.light ::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.3);
+}
+.dark ::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 9999px;
+}
+.light ::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.12);
+  border-radius: 9999px;
+}
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+.light ::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.25);
+}
+
+/* Glassmorphic panels with rounded corners in monochrome style */
+.carbon-panel, .dashboard-card {
+  border-radius: 20px;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.dark .carbon-panel, .dark .dashboard-card {
+  background: rgba(18, 18, 18, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  box-shadow: 
+    0 8px 32px 0 rgba(0, 0, 0, 0.6),
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.03);
+}
+
+.light .carbon-panel, .light .dashboard-card {
+  background: rgba(255, 255, 255, 0.85);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  box-shadow: 
+    0 8px 24px 0 rgba(0, 0, 0, 0.04),
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.6);
+}
+
+.dark .carbon-panel:hover, .dark .dashboard-card:hover {
+  border-color: rgba(255, 255, 255, 0.15);
+  box-shadow: 
+    0 16px 40px 0 rgba(0, 0, 0, 0.7),
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.05);
+  transform: translateY(-1px);
+}
+
+.light .carbon-panel:hover, .light .dashboard-card:hover {
+  border-color: rgba(0, 0, 0, 0.15);
+  box-shadow: 
+    0 12px 32px 0 rgba(0, 0, 0, 0.08),
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.8);
+  transform: translateY(-1px);
+}
+
+/* Input Fields */
+.dark input[type="text"], .dark select, .dark textarea {
+  background: rgba(12, 12, 12, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #fff;
+}
+.light input[type="text"], .light select, .light textarea {
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  color: #121212;
+}
+.dark input[type="text"]:focus, .dark select:focus, .dark textarea:focus {
+  border-color: rgba(255, 255, 255, 0.35);
+  @apply ring-1 ring-white/10;
+}
+.light input[type="text"]:focus, .light select:focus, .light textarea:focus {
+  border-color: rgba(0, 0, 0, 0.35);
+  @apply ring-1 ring-black/10;
+}
+
+.dark input[type="range"] {
+  @apply accent-white bg-neutral-800;
+}
+.light input[type="range"] {
+  @apply accent-black bg-neutral-200;
+}
+
+/* Thin border helper */
+.dark .border-carbon {
   border-color: rgba(255, 255, 255, 0.06);
 }
-
-.text-carbon-muted {
-  color: rgba(255, 255, 255, 0.35);
+.light .border-carbon {
+  border-color: rgba(0, 0, 0, 0.06);
 }
 
-/* Accent lines and spacing */
-.thin-accent-line {
+/* Muted text helper */
+.dark .text-carbon-muted {
+  color: rgba(255, 255, 255, 0.35);
+}
+.light .text-carbon-muted {
+  color: rgba(0, 0, 0, 0.45);
+}
+
+/* Accent line */
+.dark .thin-accent-line {
   height: 1px;
-  background: linear-gradient(to right, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.02) 100%);
+  background: linear-gradient(to right, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.02) 50%, rgba(255, 255, 255, 0) 100%);
   border: none;
+}
+.light .thin-accent-line {
+  height: 1px;
+  background: linear-gradient(to right, rgba(0, 0, 0, 0.08) 0%, rgba(0, 0, 0, 0.02) 50%, rgba(0, 0, 0, 0) 100%);
+  border: none;
+}
+
+/* Mesh gradient background in monochrome */
+.bg-mesh-purple {
+  position: relative;
+  overflow: hidden;
+  transition: background-color var(--transition-speed);
+}
+.dark .bg-mesh-purple {
+  background-color: #0f0f0f;
+  background-image: 
+    radial-gradient(at 10% 20%, rgba(255, 255, 255, 0.07) 0px, transparent 60%),
+    radial-gradient(at 90% 10%, rgba(255, 255, 255, 0.05) 0px, transparent 50%),
+    radial-gradient(at 50% 90%, rgba(255, 255, 255, 0.03) 0px, transparent 60%);
+}
+.light .bg-mesh-purple {
+  background-color: #e5e5e5;
+  background-image: 
+    radial-gradient(at 10% 20%, rgba(0, 0, 0, 0.04) 0px, transparent 60%),
+    radial-gradient(at 90% 10%, rgba(0, 0, 0, 0.03) 0px, transparent 50%),
+    radial-gradient(at 50% 90%, rgba(0, 0, 0, 0.02) 0px, transparent 60%);
+}
+
+.bg-mesh-purple::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-size: 20px 20px;
+  pointer-events: none;
+}
+.dark .bg-mesh-purple::before {
+  background-image: 
+    linear-gradient(rgba(255, 255, 255, 0.008) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.008) 1px, transparent 1px);
+}
+.light .bg-mesh-purple::before {
+  background-image: 
+    linear-gradient(rgba(0, 0, 0, 0.012) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 0, 0, 0.012) 1px, transparent 1px);
+}
+
+/* Pulsing scanner sweeps */
+@keyframes scanner-sweep {
+  0% { transform: translateY(-100%); }
+  100% { transform: translateY(100%); }
+}
+.scanner-glow {
+  position: relative;
+  overflow: hidden;
+}
+.dark .scanner-glow::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 8px;
+  background: linear-gradient(to bottom, transparent, rgba(255, 255, 255, 0.05), transparent);
+  animation: scanner-sweep 4s linear infinite;
+  pointer-events: none;
+}
+.light .scanner-glow::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 8px;
+  background: linear-gradient(to bottom, transparent, rgba(0, 0, 0, 0.03), transparent);
+  animation: scanner-sweep 4s linear infinite;
+  pointer-events: none;
+}
+
+/* SVG Chart Path Animations */
+@keyframes svg-dash {
+  to { stroke-dashoffset: 0; }
+}
+.animate-svg-dash {
+  stroke-dasharray: 283;
+  stroke-dashoffset: 283;
+  animation: svg-dash 1.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+/* Buttons */
+.dark .btn-primary {
+  @apply bg-white text-black hover:bg-slate-200 transition-all duration-300 font-semibold py-3 px-6 rounded-xl cursor-pointer shadow-md shadow-white/5;
+}
+.light .btn-primary {
+  @apply bg-black text-white hover:bg-neutral-800 transition-all duration-300 font-semibold py-3 px-6 rounded-xl cursor-pointer shadow-md shadow-black/5;
+}
+
+.dark .btn-secondary {
+  @apply bg-neutral-900 border border-neutral-800 text-slate-200 hover:bg-neutral-800 rounded-xl transition-all duration-300 cursor-pointer;
+}
+.light .btn-secondary {
+  @apply bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 rounded-xl transition-all duration-300 cursor-pointer;
+}
+
+.dark .btn-glass {
+  @apply bg-white/5 border border-white/10 text-white hover:bg-white/10 rounded-xl transition-all duration-300 cursor-pointer;
+}
+.light .btn-glass {
+  @apply bg-black/5 border border-black/10 text-black hover:bg-black/10 rounded-xl transition-all duration-300 cursor-pointer;
 }

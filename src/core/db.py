@@ -137,6 +137,15 @@ class Database:
                 applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 PRIMARY KEY (user_id, job_id)
             )
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS payments (
+                utr VARCHAR(255) PRIMARY KEY,
+                user_id VARCHAR(255),
+                amount REAL,
+                status VARCHAR(50),
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
             """
         ]
         
@@ -491,5 +500,31 @@ class Database:
             logger.error(f"Error deleting resume profile for user {user_id}: {e}")
             if self.conn:
                 self.conn.rollback()
+
+    def save_payment(self, utr: str, user_id: str, amount: float, status: str = "completed") -> bool:
+        query = "INSERT INTO payments (utr, user_id, amount, status) VALUES (?, ?, ?, ?)"
+        try:
+            cur = self.conn.cursor()
+            cur.execute(query, (utr, user_id, amount, status))
+            self.conn.commit()
+            cur.close()
+            logger.info(f"Payment UTR {utr} saved successfully for user {user_id}.")
+            return True
+        except Exception as e:
+            logger.error(f"Error saving payment UTR {utr}: {e}")
+            if self.conn:
+                self.conn.rollback()
+            return False
+
+    def is_utr_used(self, utr: str) -> bool:
+        try:
+            cur = self.conn.cursor()
+            cur.execute("SELECT 1 FROM payments WHERE utr = ?", (utr,))
+            row = cur.fetchone()
+            cur.close()
+            return row is not None
+        except Exception as e:
+            logger.error(f"Error checking UTR {utr}: {e}")
+            return False
 
 db = Database()
