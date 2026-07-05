@@ -40,8 +40,8 @@ class JobScraper:
                 browser, page = await self._get_browser(p)
                 for keyword in search_keywords:
                     for location in search_locations:
-                        # f_TPR=r86400 (Last 24 Hours)
-                        url = f"https://www.linkedin.com/jobs/search/?keywords={keyword}&location={location}&f_TPR=r86400&sortBy=DD"
+                        # f_TPR=r1209600 (Last 14 Days)
+                        url = f"https://www.linkedin.com/jobs/search/?keywords={keyword}&location={location}&f_TPR=r1209600&sortBy=DD"
                         
                         if job_type in ["F", "P", "I"]: 
                             url += f"&f_JT={job_type}"
@@ -135,8 +135,8 @@ class JobScraper:
                         k_slug = keyword.lower().replace(" ", "-")
                         l_slug = location.lower().replace(" ", "-")
                         
-                        # jobAge=1 gets jobs from last 24 hours
-                        url = f"https://www.naukri.com/{k_slug}-jobs-in-{l_slug}?jobAge=1"
+                        # jobAge=14 gets jobs from last 14 days
+                        url = f"https://www.naukri.com/{k_slug}-jobs-in-{l_slug}?jobAge=14"
                         logger.info(f"Naukri [{keyword} | {location}]: Searching...")
                         
                         try:
@@ -216,6 +216,88 @@ class JobScraper:
                             logger.error(f"Naukri scraping page error: {e}")
             except Exception as outer_e:
                 logger.error(f"Naukri browser launch failed: {outer_e}")
+            finally:
+                if browser:
+                    try:
+                        await browser.close()
+                    except Exception:
+                        pass
+        return jobs
+
+    async def scrape_google_xray(self, keywords=None, locations=None):
+        jobs = []
+        search_keywords = keywords if keywords else self.keywords
+        search_locations = locations if locations else self.locations
+        
+        async with async_playwright() as p:
+            browser = None
+            try:
+                browser, page = await self._get_browser(p)
+                for keyword in search_keywords:
+                    for location in search_locations:
+                        # Dork query: Greenhouse or Lever specific to keyword & location
+                        query = f'site:boards.greenhouse.io OR site:jobs.lever.co "{keyword}" "{location}"'
+                        url = f"https://duckduckgo.com/?q={query}&df=w"
+                        
+                        logger.info(f"Google/DDG X-Ray [{keyword} | {location}]: Searching...")
+                        
+                        try:
+                            await page.goto(url, wait_until='load', timeout=60000)
+                            await asyncio.sleep(random.uniform(4, 6))
+                            
+                            # Parse standard DDG search result blocks
+                            search_results = await page.query_selector_all('article[data-testid="result"]')
+                            logger.info(f"Google/DDG X-Ray: Found {len(search_results)} result blocks.")
+                            
+                            for block in search_results[:6]:
+                                try:
+                                    title_elem = await block.query_selector('a[data-testid="result-title-a"]')
+                                    if not title_elem:
+                                        continue
+                                        
+                                    raw_title = await title_elem.inner_text()
+                                    link = await title_elem.get_attribute("href") if title_elem else ""
+                                    
+                                    if not link or ("greenhouse.io" not in link and "lever.co" not in link):
+                                        continue
+                                        
+                                    # Extract Company Name from URL or Title
+                                    company = "Startup (Google X-Ray)"
+                                    if "greenhouse.io" in link:
+                                        parts = link.split("/")
+                                        if len(parts) > 3: company = parts[3].capitalize()
+                                    elif "lever.co" in link:
+                                        parts = link.split("/")
+                                        if len(parts) > 3: company = parts[3].capitalize()
+                                        
+                                    snippet_elem = await block.query_selector("div.VwiC3b")
+                                    snippet = await snippet_elem.inner_text() if snippet_elem else ""
+                                    
+                                    job_id = "gg_" + str(hash(link))[-8:]
+                                    
+                                    jobs.append({
+                                        "job_id": job_id,
+                                        "title": raw_title.split(" - ")[0].strip() if " - " in raw_title else raw_title,
+                                        "company": company,
+                                        "location": location,
+                                        "remote_status": "Remote" if "remote" in location.lower() or "remote" in snippet.lower() else "Onsite",
+                                        "salary": "Competitive",
+                                        "experience": "Not Specified",
+                                        "skills": "",
+                                        "description": snippet,
+                                        "url": link,
+                                        "source": "Google / Startup ATS",
+                                        "company_size": "50 - 500 employees",
+                                        "industry": "Tech / Startup",
+                                        "posting_date": "Past Week",
+                                        "visa_sponsorship": "Not Specified",
+                                        "recruiter_link": ""
+                                    })
+                                except Exception: continue
+                        except Exception as e:
+                            logger.error(f"Google X-Ray page error: {e}")
+            except Exception as outer_e:
+                logger.error(f"Google browser launch failed: {outer_e}")
             finally:
                 if browser:
                     try:

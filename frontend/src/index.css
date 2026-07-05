@@ -19,16 +19,10 @@ h1, h2, h3, h4, h5, h6 {
   font-family: 'Space Grotesk', sans-serif;
 }
 
-/* Dark Mode Color Palette */
+/* Dark Mode Color Palette - Matte Black */
 .dark body {
-  background-color: #090909;
-  background-image: 
-    radial-gradient(circle at 10% 20%, rgba(255, 255, 255, 0.02) 0%, transparent 40%),
-    radial-gradient(circle at 90% 80%, rgba(255, 255, 255, 0.01) 0%, transparent 50%),
-    linear-gradient(rgba(255, 255, 255, 0.005) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.005) 1px, transparent 1px);
-  background-size: 100% 100%, 100% 100%, 40px 40px, 40px 40px;
-  color: #d4d4d4;
+  background-color: #121212;
+  color: #e0e0e0;
   @apply selection:bg-white/10 selection:text-white antialiased overflow-x-hidden;
 }
 
@@ -76,11 +70,9 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .dark .carbon-panel, .dark .dashboard-card {
-  background: rgba(18, 18, 18, 0.75);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  box-shadow: 
-    0 8px 32px 0 rgba(0, 0, 0, 0.6),
-    inset 0 1px 0 0 rgba(255, 255, 255, 0.03);
+  background: rgba(24, 24, 24, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  box-shadow: 0 4px 20px 0 rgba(0, 0, 0, 0.4);
 }
 
 .light .carbon-panel, .light .dashboard-card {
@@ -92,10 +84,8 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .dark .carbon-panel:hover, .dark .dashboard-card:hover {
-  border-color: rgba(255, 255, 255, 0.15);
-  box-shadow: 
-    0 16px 40px 0 rgba(0, 0, 0, 0.7),
-    inset 0 1px 0 0 rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 8px 30px 0 rgba(0, 0, 0, 0.5);
   transform: translateY(-1px);
 }
 
@@ -109,9 +99,9 @@ h1, h2, h3, h4, h5, h6 {
 
 /* Input Fields */
 .dark input[type="text"], .dark select, .dark textarea {
-  background: rgba(12, 12, 12, 0.8);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  color: #fff;
+  background: rgba(24, 24, 24, 1);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  color: #e0e0e0;
 }
 .light input[type="text"], .light select, .light textarea {
   background: rgba(255, 255, 255, 0.95);
@@ -136,7 +126,7 @@ h1, h2, h3, h4, h5, h6 {
 
 /* Thin border helper */
 .dark .border-carbon {
-  border-color: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.04);
 }
 .light .border-carbon {
   border-color: rgba(0, 0, 0, 0.06);
@@ -169,11 +159,8 @@ h1, h2, h3, h4, h5, h6 {
   transition: background-color var(--transition-speed);
 }
 .dark .bg-mesh-mono {
-  background-color: #0f0f0f;
-  background-image: 
-    radial-gradient(at 10% 20%, rgba(255, 255, 255, 0.07) 0px, transparent 60%),
-    radial-gradient(at 90% 10%, rgba(255, 255, 255, 0.05) 0px, transparent 50%),
-    radial-gradient(at 50% 90%, rgba(255, 255, 255, 0.03) 0px, transparent 60%);
+  background-color: #181818;
+  background-image: none;
 }
 .light .bg-mesh-mono {
   background-color: #e5e5e5;
@@ -191,9 +178,7 @@ h1, h2, h3, h4, h5, h6 {
   pointer-events: none;
 }
 .dark .bg-mesh-mono::before {
-  background-image: 
-    linear-gradient(rgba(255, 255, 255, 0.008) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.008) 1px, transparent 1px);
+  background-image: none;
 }
 .light .bg-mesh-mono::before {
   background-image: 
@@ -245,7 +230,7 @@ h1, h2, h3, h4, h5, h6 {
 
 /* Buttons */
 .dark .btn-primary {
-  @apply bg-white text-black hover:bg-slate-200 transition-all duration-300 font-semibold py-3 px-6 rounded-xl cursor-pointer shadow-md shadow-white/5;
+  @apply bg-[#e0e0e0] text-[#121212] hover:bg-white transition-all duration-300 font-semibold py-3 px-6 rounded-xl cursor-pointer shadow-md shadow-black/20;
 }
 .light .btn-primary {
   @apply bg-black text-white hover:bg-neutral-800 transition-all duration-300 font-semibold py-3 px-6 rounded-xl cursor-pointer shadow-md shadow-black/5;

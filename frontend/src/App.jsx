@@ -58,6 +58,9 @@ function App() {
   const [logs, setLogs] = useState([]);
   const logEndRef = useRef(null);
 
+  // Auto-scrolling AI Insights
+  const [insightIndex, setInsightIndex] = useState(0);
+
   // Modal and paste state
   const [showPasteModal, setShowPasteModal] = useState(false);
   const [pastedResumeText, setPastedResumeText] = useState('');
@@ -171,6 +174,14 @@ function App() {
     document.documentElement.className = theme;
     localStorage.setItem('theme', theme);
   }, [theme]);
+
+  // AI Insights Auto-Scroll Timer
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setInsightIndex(prev => (prev + 1) % 4);
+    }, 4500);
+    return () => clearInterval(timer);
+  }, []);
 
 
 
@@ -304,6 +315,18 @@ function App() {
     return matchesKeyword && matchesRemote && matchesSource && matchesScore;
   });
 
+  const aiInsightsList = profile?.name ? [
+    `Your match score for ${keywords || 'target roles'} has increased by ${analytics.successRate}% based on your parsed CV stacks.`,
+    `Your resume aligns with ${analytics.profileStrength}% of trending tech gaps in the current market.`,
+    `We detected ${analytics.matchedCount} strong potential role alignments in the last 24 hours.`,
+    `Consider adding more metric-driven bullet points to improve your ATS parse rate by an estimated 14%.`
+  ] : [
+    "Upload your CV in the sidebar or below to unlock deep career compatibility insights.",
+    "Our AI continuously cross-references your skills with real-time job market telemetry.",
+    "Automated match indicators will appear here once your profile is analyzed.",
+    "Pro tip: Paste a plain text version of your CV for the fastest possible parse speed."
+  ];
+
   return (
     <div className="min-h-screen text-slate-800 dark:text-slate-100 flex flex-col lg:flex-row antialiased select-none font-sans">
       
@@ -412,36 +435,17 @@ function App() {
 
           <div className="thin-accent-line" />
 
-          {/* Pro Style upgrade Card */}
-          <div className="bg-mesh-mono border border-slate-300 dark:border-slate-800 p-5 rounded-3xl relative overflow-hidden group shadow-[0_8px_32px_rgba(255,255,255,0.01)]">
-            <div className="absolute -right-6 -bottom-6 w-24 h-24 bg-white/5 rounded-full blur-xl group-hover:bg-white/10 transition-all duration-500"></div>
-            <div className="relative z-10 space-y-3.5">
-              <div className="flex items-center gap-2">
-                <Sparkles size={13} className="text-black dark:text-white" />
-                <span className="text-[9px] font-bold tracking-[0.15em] text-black dark:text-white uppercase">
-                  JobSentinel Pro
-                </span>
-              </div>
-              <p className="text-[10px] text-slate-600 dark:text-slate-400 leading-normal font-light">
-                Elevate your career search with fully autonomous search, crawl loops, and email auto-outreach.
-              </p>
-              <button 
-                onClick={() => alert("JobSentinel Pro integration coming soon!")}
-                className="w-full py-2.5 bg-black dark:bg-white hover:bg-neutral-800 dark:hover:bg-slate-200 text-white dark:text-slate-950 rounded-xl text-[9px] font-bold uppercase tracking-wider transition-all duration-300 shadow-md hover:-translate-y-1 hover:shadow-lg active:scale-95 cursor-pointer"
-              >
-                Elevate career with AI
-              </button>
-              
-              <a 
-                href="https://github.com/sponsors/rishikeshgowdakk" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="w-full mt-2 py-2 border border-slate-300 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-xl text-[9px] font-bold uppercase tracking-wider transition-all duration-300 hover:-translate-y-0.5 active:scale-95 cursor-pointer flex items-center justify-center gap-2"
-              >
-                <svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path></svg>
-                Sponsor on GitHub
-              </a>
-            </div>
+          {/* Sponsor Button */}
+          <div className="pt-2">
+            <a 
+              href="https://github.com/sponsors/rishikeshgowdakk" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="w-full py-2.5 border border-slate-300 dark:border-slate-800 hover:bg-slate-200 dark:hover:bg-slate-800/50 text-slate-700 dark:text-slate-300 rounded-xl text-[9px] font-bold uppercase tracking-wider transition-all duration-300 hover:-translate-y-0.5 active:scale-95 cursor-pointer flex items-center justify-center gap-2 shadow-sm"
+            >
+              <svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path></svg>
+              Sponsor on GitHub
+            </a>
           </div>
         </div>
       </aside>
@@ -501,23 +505,32 @@ function App() {
                   </div>
                   <div className="space-y-2">
                     <h4 className="text-sm font-bold text-slate-900 dark:text-slate-100 tracking-wide">Career Compatibility</h4>
-                    <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed font-light line-clamp-4">
-                      {profile?.name ? (
-                        `Your match score for ${keywords || 'target roles'} has increased by ${analytics.successRate}% based on your parsed CV stacks. Your resume aligns with ${analytics.profileStrength}% of trending tech gaps.`
-                      ) : (
-                        "Upload your CV in the sidebar or below to unlock deep career compatibility insights, target recommendations, and automated match indicators."
-                      )}
-                    </p>
+                    <div className="relative h-[4.5rem] overflow-hidden">
+                      <div 
+                        className="absolute w-full transition-all duration-700 ease-in-out"
+                        style={{ transform: `translateY(-${insightIndex * 4.5}rem)` }}
+                      >
+                        {aiInsightsList.map((insight, idx) => (
+                          <div key={idx} className="h-[4.5rem] flex items-start">
+                            <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed font-light pr-2">
+                              {insight}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
                   </div>
                 </div>
                 
                 <div className="flex justify-between items-center pt-2 relative z-10">
                   {/* Page indicator dots */}
                   <div className="flex gap-1.5">
-                    <span className="w-1.5 h-1.5 rounded-full bg-black dark:bg-white"></span>
-                    <span className="w-1.5 h-1.5 rounded-full bg-black/30 dark:bg-white/45"></span>
-                    <span className="w-1.5 h-1.5 rounded-full bg-black/30 dark:bg-white/45"></span>
-                    <span className="w-1.5 h-1.5 rounded-full bg-black/30 dark:bg-white/45"></span>
+                    {[0, 1, 2, 3].map(i => (
+                      <span 
+                        key={i} 
+                        className={`h-1.5 rounded-full transition-all duration-500 ${insightIndex === i ? 'bg-black dark:bg-white w-3' : 'bg-black/30 dark:bg-white/45 w-1.5'}`}
+                      />
+                    ))}
                   </div>
                   <button 
                     onClick={() => setActiveTab('critique')}

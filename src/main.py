@@ -63,7 +63,8 @@ async def run_scanner(broadcast_callback=None):
             # 2. Scrape platforms in parallel
             tasks = [
                 scraper.scrape_linkedin(keywords_list, locations_list),
-                scraper.scrape_naukri(keywords_list, locations_list)
+                scraper.scrape_naukri(keywords_list, locations_list),
+                scraper.scrape_google_xray(keywords_list, locations_list)
             ]
             
             platform_results = await asyncio.gather(*tasks, return_exceptions=True)
