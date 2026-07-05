@@ -69,6 +69,7 @@ function App() {
   // Filters for job feed
   const [filterKeyword, setFilterKeyword] = useState('');
   const [filterRemote, setFilterRemote] = useState('All');
+  const [pipelineFilter, setPipelineFilter] = useState('All');
   const [filterSource, setFilterSource] = useState('All');
   const [filterMinScore, setFilterMinScore] = useState(0);
 
@@ -294,13 +295,20 @@ function App() {
     }
   };
 
+  const handlePipelineClick = (filterType) => {
+    setPipelineFilter(filterType);
+    setActiveTab('jobs');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   const filteredJobs = jobs.filter(job => {
-    const matchesKeyword = !filterKeyword || 
-      (job.title && job.title.toLowerCase().includes(filterKeyword.toLowerCase())) || 
-      (job.company && job.company.toLowerCase().includes(filterKeyword.toLowerCase())) ||
-      (job.skills && job.skills.toLowerCase().includes(filterKeyword.toLowerCase())) ||
-      (job.description && job.description.toLowerCase().includes(filterKeyword.toLowerCase())) ||
-      (job.summary && job.summary.toLowerCase().includes(filterKeyword.toLowerCase()));
+    const searchKw = filterKeyword.trim().toLowerCase();
+    const matchesKeyword = !searchKw || 
+      (job.title && job.title.toLowerCase().includes(searchKw)) || 
+      (job.company && job.company.toLowerCase().includes(searchKw)) ||
+      (job.skills && job.skills.toLowerCase().includes(searchKw)) ||
+      (job.description && job.description.toLowerCase().includes(searchKw)) ||
+      (job.summary && job.summary.toLowerCase().includes(searchKw));
       
     const matchesRemote = filterRemote === 'All' || 
       (filterRemote === 'Remote' && job.remote_status?.toLowerCase() === 'remote') ||
@@ -312,7 +320,13 @@ function App() {
       
     const matchesScore = (job.matchScore || 0) >= filterMinScore;
     
-    return matchesKeyword && matchesRemote && matchesSource && matchesScore;
+    const matchesPipeline = pipelineFilter === 'All' ||
+      (pipelineFilter === 'Match80' && (job.matchScore || 0) >= 80) ||
+      (pipelineFilter === 'saved' && job.status === 'saved') ||
+      (pipelineFilter === 'applied' && job.status === 'applied') ||
+      (pipelineFilter === 'interview' && job.status === 'interview');
+    
+    return matchesKeyword && matchesRemote && matchesSource && matchesScore && matchesPipeline;
   });
 
   const aiInsightsList = profile?.name ? [
@@ -689,7 +703,11 @@ function App() {
                     <h3 className="text-sm font-bold text-slate-800 dark:text-white tracking-wide">Recent Discoveries</h3>
                   </div>
                   <button 
-                    onClick={() => setActiveTab('jobs')}
+                    onClick={() => {
+                      setPipelineFilter('All');
+                      setActiveTab('jobs');
+                      window.scrollTo({ top: 0, behavior: 'smooth' });
+                    }}
                     className="text-[10px] font-bold text-black dark:text-white hover:text-slate-700 dark:hover:text-slate-300 uppercase tracking-wider flex items-center gap-1 transition-colors cursor-pointer"
                   >
                     <span>View All</span>
@@ -712,7 +730,8 @@ function App() {
                     return (
                       <div 
                         key={job.job_id} 
-                        className="flex items-center justify-between p-3.5 bg-slate-100/50 dark:bg-slate-900/20 border border-slate-200 dark:border-slate-900/40 rounded-2xl hover:bg-slate-200/50 dark:hover:bg-slate-900/40 transition-all duration-300"
+                        onClick={() => window.open(job.url, '_blank')}
+                        className="flex items-center justify-between p-3.5 bg-slate-100/50 dark:bg-slate-900/20 border border-slate-200 dark:border-slate-900/40 rounded-2xl hover:bg-slate-200/50 dark:hover:bg-slate-900/40 transition-all duration-300 cursor-pointer"
                       >
                         <div className="flex items-center gap-3.5 min-w-0">
                           {/* Logo Badge */}
@@ -913,15 +932,17 @@ function App() {
                 <h3 className="text-sm font-bold text-slate-800 dark:text-white tracking-wide">Application Journey</h3>
               </div>
               
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 {[
-                  { label: 'Crawled Jobs', val: analytics.totalJobs, color: 'text-slate-700 dark:text-slate-300' },
-                  { label: 'Match \u2265 80%', val: analytics.matchedCount, color: 'text-neutral-900 dark:text-white' },
-                  { label: 'Saved Hunt', val: analytics.savedCount, color: 'text-slate-700 dark:text-slate-300' },
-                  { label: 'Applied', val: analytics.appliedCount, color: 'text-neutral-700 dark:text-neutral-300' },
-                  { label: 'Interviews', val: analytics.interviewCount, color: 'text-neutral-900 dark:text-white' }
+                  { label: 'Crawled Jobs', val: analytics.totalJobs, color: 'text-slate-700 dark:text-slate-300', filter: 'All' },
+                  { label: 'Match ≥ 80%', val: analytics.matchedCount, color: 'text-neutral-900 dark:text-white', filter: 'Match80' },
+                  { label: 'Saved Hunt', val: analytics.savedCount, color: 'text-slate-700 dark:text-slate-300', filter: 'saved' },
+                  { label: 'Applied', val: analytics.appliedCount, color: 'text-neutral-700 dark:text-neutral-300', filter: 'applied' }
                 ].map((item, index) => (
-                  <div key={index} className="p-4 bg-slate-100/50 dark:bg-slate-900/25 border border-slate-200 dark:border-slate-900 rounded-2xl text-center shadow-[inset_0_0_12px_rgba(255,255,255,0.01)] hover:border-slate-300 dark:hover:border-slate-800/80 transition-all duration-300">
+                  <div 
+                    key={index} 
+                    onClick={() => handlePipelineClick(item.filter)}
+                    className={`cursor-pointer p-4 bg-slate-100/50 dark:bg-slate-900/25 border rounded-2xl text-center shadow-[inset_0_0_12px_rgba(255,255,255,0.01)] transition-all duration-300 ${pipelineFilter === item.filter ? 'border-neutral-500 dark:border-neutral-500 bg-slate-200/50 dark:bg-slate-800/50 ring-1 ring-neutral-500/20' : 'border-slate-200 dark:border-slate-900 hover:border-slate-300 dark:hover:border-slate-800/80'}`}>
                     <span className="text-[8px] font-bold text-slate-500 uppercase tracking-widest block mb-1">
                       {item.label}
                     </span>
@@ -942,7 +963,15 @@ function App() {
             <div className="flex justify-between items-end border-b border-slate-200 dark:border-slate-900/60 pb-6">
               <div>
                 <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 font-mono tracking-widest uppercase block mb-1">01 . Discoveries</span>
-                <h2 className="text-2xl font-black uppercase tracking-wider text-slate-800 dark:text-white">Active Postings</h2>
+                <div className="flex items-center gap-3">
+                  <h2 className="text-2xl font-black uppercase tracking-wider text-slate-800 dark:text-white">Active Postings</h2>
+                  {pipelineFilter !== 'All' && (
+                    <span className="px-2 py-0.5 bg-neutral-200 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 text-[9px] uppercase tracking-widest rounded-full font-bold flex items-center gap-2">
+                      Filtered: {pipelineFilter} 
+                      <button onClick={() => setPipelineFilter('All')} className="hover:text-red-500">&times;</button>
+                    </span>
+                  )}
+                </div>
               </div>
               <div className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">
                 Matches Available: {filteredJobs.length}
@@ -958,13 +987,22 @@ function App() {
                   <div className="space-y-5 text-xs">
                     <div className="space-y-1.5">
                       <label className="text-[9px] font-bold text-slate-400 uppercase tracking-widest pl-0.5">Query</label>
-                      <input 
-                        type="text" 
-                        value={filterKeyword} 
-                        onChange={(e) => setFilterKeyword(e.target.value)} 
-                        placeholder="Title, Company, Skills..."
-                        className="w-full bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800/80 p-2.5 focus:border-neutral-500 outline-none text-slate-800 dark:text-white text-xs rounded-xl" 
-                      />
+                      <div className="relative">
+                        <input 
+                          type="text" 
+                          value={filterKeyword} 
+                          onChange={(e) => setFilterKeyword(e.target.value)} 
+                          onKeyDown={(e) => { if (e.key === 'Enter') window.scrollTo({ top: 0, behavior: 'smooth' }) }}
+                          placeholder="Title, Company, Skills..."
+                          className="w-full bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800/80 p-2.5 pr-10 focus:border-neutral-500 outline-none text-slate-800 dark:text-white text-xs rounded-xl" 
+                        />
+                        <button 
+                          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-800 dark:hover:text-white transition-colors cursor-pointer"
+                        >
+                          <Search size={14} />
+                        </button>
+                      </div>
                     </div>
                     <div className="space-y-1.5">
                       <label className="text-[9px] font-bold text-slate-400 uppercase tracking-widest pl-0.5">Location Mode</label>
@@ -998,6 +1036,16 @@ function App() {
                         onChange={(e) => setFilterMinScore(Number(e.target.value))} 
                         className="w-full accent-black dark:accent-white bg-slate-200 dark:bg-slate-900" 
                       />
+                    </div>
+                    
+                    <div className="pt-2">
+                      <button 
+                        onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+                        className="w-full py-3 bg-black dark:bg-white hover:bg-neutral-800 dark:hover:bg-slate-200 text-white dark:text-slate-950 font-bold text-[10px] uppercase tracking-widest rounded-xl transition-all duration-300 hover:-translate-y-0.5 shadow-md flex items-center justify-center gap-2 cursor-pointer"
+                      >
+                        <Search size={14} />
+                        <span>Search</span>
+                      </button>
                     </div>
                   </div>
                 </div>

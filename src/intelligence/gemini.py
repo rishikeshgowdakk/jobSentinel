@@ -14,7 +14,7 @@ class GeminiAnalyzer:
                 logger.error(f"Failed to initialize GenAI client: {e}")
         else:
             logger.warning("No valid Gemini API key detected. Running in local fallback mode.")
-        self.model_name = 'gemini-1.5-flash'
+        self.model_name = 'gemini-2.0-flash'
 
     def get_embedding(self, text: str) -> list:
         if not self.client or not text:
@@ -23,7 +23,7 @@ class GeminiAnalyzer:
             # Clean text up to fit in token limit of embeddings
             truncated_text = text[:1500]
             response = self.client.models.embed_content(
-                model="text-embedding-004",
+                model="gemini-embedding-2",
                 contents=truncated_text
             )
             if hasattr(response, 'embeddings') and len(response.embeddings) > 0:
