@@ -203,7 +203,7 @@ async def upload_resume(background_tasks: BackgroundTasks, request: Request, fil
         # Clean and validate UPI transaction UTR format
         utr_clean = utr.strip()
         if utr_clean:
-            if not (re.match(r'^\d{12}$', utr_clean) or utr_clean == "TEST12345678"):
+            if not re.match(r'^\d{12}$', utr_clean):
                 return {"status": "error", "message": "Invalid UTR format. UTR must be a 12-digit number."}
                 
             if db.is_utr_used(utr_clean):
@@ -241,7 +241,8 @@ async def upload_resume(background_tasks: BackgroundTasks, request: Request, fil
         embedding = analyzer.get_embedding(text)
         
         # Save payment transaction to prevent double spending
-        db.save_payment(utr_clean, user_id, 1.0)
+        if utr_clean:
+            db.save_payment(utr_clean, user_id, 1.0)
         
         # Save to database
         db.save_profile(user_id, text, structured_data, embedding)
@@ -262,7 +263,7 @@ async def paste_resume(req: PasteResume, background_tasks: BackgroundTasks, requ
         # Clean and validate UPI transaction UTR format
         utr_clean = req.utr.strip()
         if utr_clean:
-            if not (re.match(r'^\d{12}$', utr_clean) or utr_clean == "TEST12345678"):
+            if not re.match(r'^\d{12}$', utr_clean):
                 return {"status": "error", "message": "Invalid UTR format. UTR must be a 12-digit number."}
                 
             if db.is_utr_used(utr_clean):
@@ -280,7 +281,8 @@ async def paste_resume(req: PasteResume, background_tasks: BackgroundTasks, requ
         embedding = analyzer.get_embedding(text)
         
         # Save payment transaction to prevent double spending
-        db.save_payment(utr_clean, user_id, 1.0)
+        if utr_clean:
+            db.save_payment(utr_clean, user_id, 1.0)
         
         # Save to database
         db.save_profile(user_id, text, structured_data, embedding)
@@ -292,6 +294,8 @@ async def paste_resume(req: PasteResume, background_tasks: BackgroundTasks, requ
     except Exception as e:
         logger.error(f"Paste error: {e}")
         return {"status": "error", "message": str(e)}
+
+
 
 @app.delete("/api/resume")
 async def delete_resume(request: Request):

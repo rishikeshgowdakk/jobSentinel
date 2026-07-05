@@ -29,10 +29,7 @@ function App() {
   // Payment check states
   const [pendingFile, setPendingFile] = useState(null);
   const [pendingPasteText, setPendingPasteText] = useState('');
-  const [showPaymentModal, setShowPaymentModal] = useState(false);
-  const [paymentUtr, setPaymentUtr] = useState('');
-  const [paymentError, setPaymentError] = useState('');
-  const [paymentVerifying, setPaymentVerifying] = useState(false);
+
   
   // Analytics and profile state
   const [analytics, setAnalytics] = useState({
@@ -175,107 +172,68 @@ function App() {
     localStorage.setItem('theme', theme);
   }, [theme]);
 
-  const completePaymentAndSubmit = async (utr) => {
-    if (!utr.trim()) {
-      setPaymentError('UTR is required.');
-      return;
-    }
-    const cleanUtr = utr.trim();
-    if (!(/^\d{12}$/.test(cleanUtr) || cleanUtr === "TEST12345678")) {
-      setPaymentError('Invalid UTR format. UTR must be exactly 12 digits.');
-      return;
-    }
 
-    setPaymentVerifying(true);
-    setPaymentError('');
-    setIsError(false);
-
-    if (pendingFile) {
-      const formData = new FormData();
-      formData.append('file', pendingFile);
-      formData.append('utr', cleanUtr);
-
-      setUploading(true);
-      setMessage('Uploading and verifying payment...');
-
-      try {
-        const response = await axios.post(`${API_BASE}/resume/upload`, formData, {
-          headers: {
-            'Content-Type': 'multipart/form-data'
-          }
-        });
-        if (response.data.status === 'success') {
-          setMessage(response.data.message);
-          setPendingFile(null);
-          setShowPaymentModal(false);
-          loadAllData();
-        } else {
-          setPaymentError(response.data.message);
-          setMessage(response.data.message);
-          setIsError(true);
-        }
-      } catch (error) {
-        console.error('Upload error details:', error);
-        setPaymentError('Failed to verify payment or upload CV.');
-        setMessage('Failed to upload resume.');
-        setIsError(true);
-      } finally {
-        setUploading(false);
-        setPaymentVerifying(false);
-      }
-    } else if (pendingPasteText) {
-      setPasting(true);
-      setMessage('Processing pasted CV and verifying payment...');
-
-      try {
-        const response = await axios.post(`${API_BASE}/resume/paste`, { 
-          text: pendingPasteText,
-          utr: cleanUtr
-        });
-        if (response.data.status === 'success') {
-          setMessage(response.data.message);
-          setPendingPasteText('');
-          setPastedResumeText('');
-          setShowPaymentModal(false);
-          setShowPasteModal(false);
-          loadAllData();
-        } else {
-          setPaymentError(response.data.message);
-          setMessage(response.data.message);
-          setIsError(true);
-        }
-      } catch (error) {
-        setPaymentError('Failed to verify payment or process CV.');
-        setMessage('Failed to connect to API server.');
-        setIsError(true);
-      } finally {
-        setPasting(false);
-        setPaymentVerifying(false);
-      }
-    } else {
-      setPaymentVerifying(false);
-      setPaymentError('No CV document loaded for evaluation.');
-    }
-  };
 
   const handleFileUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
-    setPendingFile(file);
-    setPendingPasteText('');
-    setPaymentUtr('');
-    setPaymentError('');
-    setShowPaymentModal(true);
-    e.target.value = ''; // Reset input to allow selecting same file again
+    
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('utr', '');
+
+    setUploading(true);
+    setMessage('Uploading resume...');
+    setIsError(false);
+
+    try {
+      const response = await axios.post(`${API_BASE}/resume/upload`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      if (response.data.status === 'success') {
+        setMessage(response.data.message);
+        loadAllData();
+      } else {
+        setMessage(response.data.message);
+        setIsError(true);
+      }
+    } catch (error) {
+      console.error('Upload error details:', error);
+      setMessage('Failed to upload resume.');
+      setIsError(true);
+    } finally {
+      setUploading(false);
+    }
+    e.target.value = ''; 
   };
 
   const handleResumePaste = async () => {
     if (!pastedResumeText.trim()) return;
-    setPendingPasteText(pastedResumeText);
-    setPendingFile(null);
-    setPaymentUtr('');
-    setPaymentError('');
-    setShowPaymentModal(true);
+    
+    setPasting(true);
+    setMessage('Processing pasted CV...');
+    setIsError(false);
+
+    try {
+      const response = await axios.post(`${API_BASE}/resume/paste`, { 
+        text: pastedResumeText,
+        utr: ''
+      });
+      if (response.data.status === 'success') {
+        setMessage(response.data.message);
+        setPastedResumeText('');
+        setShowPasteModal(false);
+        loadAllData();
+      } else {
+        setMessage(response.data.message);
+        setIsError(true);
+      }
+    } catch (error) {
+      setMessage('Failed to connect to API server.');
+      setIsError(true);
+    } finally {
+      setPasting(false);
+    }
   };
 
   const handleDeleteResume = async () => {
@@ -473,6 +431,16 @@ function App() {
               >
                 Elevate career with AI
               </button>
+              
+              <a 
+                href="https://github.com/sponsors/rishikeshgowdakk" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="w-full mt-2 py-2 border border-slate-300 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-xl text-[9px] font-bold uppercase tracking-wider transition-all duration-300 hover:-translate-y-0.5 active:scale-95 cursor-pointer flex items-center justify-center gap-2"
+              >
+                <svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path></svg>
+                Sponsor on GitHub
+              </a>
             </div>
           </div>
         </div>
@@ -1442,85 +1410,7 @@ function App() {
         </div>
       )}
 
-      {/* Payment Verification Modal (UPI Pay-In ₹1) */}
-      {showPaymentModal && (
-        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-[110] flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800/80 backdrop-blur-xl max-w-md w-full p-8 space-y-6 shadow-2xl relative rounded-[24px] text-slate-900 dark:text-slate-100">
-            <button 
-              onClick={() => {
-                setShowPaymentModal(false);
-                setPendingFile(null);
-                setPendingPasteText('');
-              }}
-              className="absolute top-6 right-6 text-slate-400 hover:text-slate-800 dark:hover:text-white transition-all text-xl font-bold outline-none cursor-pointer"
-            >
-              &times;
-            </button>
-            
-            <div className="space-y-1.5 text-center">
-              <span className="inline-block px-2.5 py-0.5 bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-[9px] font-bold tracking-widest text-slate-600 dark:text-slate-400 rounded-full uppercase">
-                Payment Verification
-              </span>
-              <h3 className="text-xl font-bold tracking-tight">
-                Scan UPI to Match CV
-              </h3>
-              <p className="text-xs text-slate-500 max-w-xs mx-auto">
-                Scan the QR code to transfer exactly ₹1.00 for autonomous matching and ATS indexing.
-              </p>
-            </div>
 
-            <div className="flex flex-col items-center justify-center p-4 bg-slate-50 dark:bg-slate-950 rounded-2xl border border-slate-150 dark:border-slate-800">
-              <img 
-                src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent("upi://pay?pa=8277098097@ibl&pn=JobSentinel&am=1.00&cu=INR&tn=JobSentinel%20Match")}`} 
-                alt="UPI QR Code" 
-                className="w-44 h-44 rounded-xl border border-slate-200 dark:border-slate-800" 
-              />
-              <span className="text-[11px] font-mono font-bold mt-3 text-slate-500 dark:text-slate-400">
-                UPI ID: 8277098097@ibl
-              </span>
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">
-                UPI Transaction UTR / Ref Number (12 digits)
-              </label>
-              <input 
-                type="text" 
-                maxLength={12}
-                placeholder="e.g. 627192837482 or TEST12345678" 
-                className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 rounded-xl outline-none focus:border-neutral-500 text-slate-800 dark:text-white text-xs font-mono"
-                value={paymentUtr}
-                onChange={(e) => setPaymentUtr(e.target.value)}
-              />
-              {paymentError && (
-                <p className="text-red-500 text-[10px] font-semibold mt-1">
-                  {paymentError}
-                </p>
-              )}
-            </div>
-
-            <div className="flex gap-4 justify-end text-xs pt-2">
-              <button 
-                onClick={() => {
-                  setShowPaymentModal(false);
-                  setPendingFile(null);
-                  setPendingPasteText('');
-                }}
-                className="px-5 py-3 border border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white uppercase tracking-widest font-bold rounded-xl transition-all duration-300 cursor-pointer"
-              >
-                Cancel
-              </button>
-              <button 
-                onClick={() => completePaymentAndSubmit(paymentUtr)}
-                disabled={paymentVerifying || !paymentUtr.trim()}
-                className="px-6 py-3 bg-black dark:bg-white text-white dark:text-black hover:bg-neutral-850 dark:hover:bg-slate-200 uppercase tracking-widest font-bold rounded-xl transition-all duration-300 disabled:opacity-50 cursor-pointer"
-              >
-                {paymentVerifying ? 'Verifying...' : 'Verify & Submit'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
