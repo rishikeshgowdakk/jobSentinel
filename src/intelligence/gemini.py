@@ -3,6 +3,17 @@ from google import genai
 from src.core.config import config
 from src.core.logger import logger
 
+TECH_DICTIONARY = {
+    "skills": ["python", "fastapi", "react", "docker", "postgresql", "kubernetes", "golang", "typescript", "javascript", "aws", "terraform", "django", "flask", "node.js", "express", "sql", "redis", "mongodb", "mysql", "java", "spring boot", "git", "ci/cd", "html", "css", "vue", "angular", "next.js", "c++", "c#"],
+    "frameworks": ["react", "fastapi", "express", "django", "flask", "spring boot", "vue", "angular", "next.js", "laravel", "rails"],
+    "languages": ["python", "javascript", "typescript", "golang", "java", "c++", "c#", "ruby", "php", "rust", "sql", "html", "css"],
+    "cloud_platforms": ["aws", "gcp", "azure", "heroku", "digitalocean", "cloudflare"],
+    "devops_tools": ["docker", "kubernetes", "terraform", "jenkins", "ansible", "github actions", "gitlab ci", "prometheus", "grafana"],
+    "databases": ["postgresql", "redis", "mongodb", "mysql", "sqlite", "cassandra", "dynamodb", "elasticsearch"],
+    "aiml_skills": ["tensorflow", "pytorch", "scikit-learn", "keras", "pandas", "numpy", "opencv", "nlp", "llm"]
+}
+
+
 class GeminiAnalyzer:
     def __init__(self):
         self.client = None
@@ -71,20 +82,10 @@ class GeminiAnalyzer:
                     except ValueError:
                         pass
 
-            tech_dictionary = {
-                "skills": ["python", "fastapi", "react", "docker", "postgresql", "kubernetes", "golang", "typescript", "javascript", "aws", "terraform", "django", "flask", "node.js", "express", "sql", "redis", "mongodb", "mysql", "java", "spring boot", "git", "ci/cd", "html", "css", "vue", "angular", "next.js", "c++", "c#"],
-                "frameworks": ["react", "fastapi", "express", "django", "flask", "spring boot", "vue", "angular", "next.js", "laravel", "rails"],
-                "languages": ["python", "javascript", "typescript", "golang", "java", "c++", "c#", "ruby", "php", "rust", "sql", "html", "css"],
-                "cloud_platforms": ["aws", "gcp", "azure", "heroku", "digitalocean", "cloudflare"],
-                "devops_tools": ["docker", "kubernetes", "terraform", "jenkins", "ansible", "github actions", "gitlab ci", "prometheus", "grafana"],
-                "databases": ["postgresql", "redis", "mongodb", "mysql", "sqlite", "cassandra", "dynamodb", "elasticsearch"],
-                "aiml_skills": ["tensorflow", "pytorch", "scikit-learn", "keras", "pandas", "numpy", "opencv", "nlp", "llm"]
-            }
-
-            extracted = {k: [] for k in tech_dictionary.keys()}
+            extracted = {k: [] for k in TECH_DICTIONARY.keys()}
             resume_lower = resume_text.lower()
             
-            for category, keywords in tech_dictionary.items():
+            for category, keywords in TECH_DICTIONARY.items():
                 for kw in keywords:
                     pattern = r'\b' + re.escape(kw) + r'\b'
                     if re.search(pattern, resume_lower):
@@ -231,13 +232,40 @@ class GeminiAnalyzer:
     def analyze_job_semantic(self, profile: dict, job_title: str, job_description: str, target_seniority: str = "All", target_job_type: str = "All") -> dict:
         if not self.client:
             logger.warning("Gemini Client not initialized. Using basic semantic matcher.")
-            # Simple keyword overlap calculation for local testing without key
-            user_skills = set([s.lower() for s in profile.get('skills', [])])
-            job_desc_lower = job_description.lower() if job_description else ""
-            matched_skills = [s for s in profile.get('skills', []) if s.lower() in job_desc_lower or s.lower() in job_title.lower()]
-            missing_skills = [s for s in ["Kubernetes", "Kafka", "Terraform", "AWS", "TypeScript"] if s.lower() not in user_skills][:2]
+            # ATS Keyword Extraction & Set Matching (Local ATS Engine)
+            job_desc_lower = (job_title + " " + (job_description or "")).lower()
             
-            score = 60 + int(len(matched_skills) * 8)
+            job_required_skills = set()
+            import re
+            for category, keywords in TECH_DICTIONARY.items():
+                for kw in keywords:
+                    pattern = r'\b' + re.escape(kw) + r'\b'
+                    if re.search(pattern, job_desc_lower):
+                        formatted = kw.upper() if kw in ["aws", "gcp", "sql", "html", "css", "nlp", "llm", "api"] else kw.capitalize()
+                        if kw == "node.js": formatted = "Node.js"
+                        if kw == "next.js": formatted = "Next.js"
+                        if kw == "spring boot": formatted = "Spring Boot"
+                        job_required_skills.add(formatted)
+            
+            user_skills = set(profile.get('skills', []))
+            user_skills_lower = {s.lower() for s in user_skills}
+            
+            # Map formatted skills to lower for accurate intersection
+            matched_skills = []
+            missing_skills = []
+            
+            for req_skill in list(job_required_skills):
+                if req_skill.lower() in user_skills_lower:
+                    matched_skills.append(req_skill)
+                else:
+                    missing_skills.append(req_skill)
+            
+            total_req = len(job_required_skills)
+            if total_req == 0:
+                score = 80 # default if no tech words found
+            else:
+                score = int((len(matched_skills) / total_req) * 100)
+                
             score = min(max(score, 0), 100)
             
             return {

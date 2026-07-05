@@ -135,9 +135,12 @@ class JobScraper:
                         k_slug = keyword.lower().replace(" ", "-")
                         l_slug = location.lower().replace(" ", "-")
                         
-                        # jobAge=14 gets jobs from last 14 days
-                        url = f"https://www.naukri.com/{k_slug}-jobs-in-{l_slug}?jobAge=14"
-                        logger.info(f"Naukri [{keyword} | {location}]: Searching...")
+                        if job_type == "I" and "intern" not in k_slug:
+                            k_slug += "-internship"
+                        
+                        # jobAge=14 gets jobs from last 14 days (or 7 for more recent)
+                        url = f"https://www.naukri.com/{k_slug}-jobs-in-{l_slug}?jobAge=7"
+                        logger.info(f"Naukri [{keyword} | {location}] (Internship: {job_type == 'I'}): Searching...")
                         
                         try:
                             await page.goto(url, wait_until='load', timeout=60000)
@@ -224,7 +227,7 @@ class JobScraper:
                         pass
         return jobs
 
-    async def scrape_google_xray(self, keywords=None, locations=None):
+    async def scrape_google_xray(self, keywords=None, locations=None, job_type="All", experience_level="All"):
         jobs = []
         search_keywords = keywords if keywords else self.keywords
         search_locations = locations if locations else self.locations
@@ -237,6 +240,8 @@ class JobScraper:
                     for location in search_locations:
                         # Dork query: Greenhouse or Lever specific to keyword & location
                         query = f'site:boards.greenhouse.io OR site:jobs.lever.co "{keyword}" "{location}"'
+                        if job_type == "I" and "intern" not in keyword.lower():
+                            query += ' "intern" OR "internship"'
                         url = f"https://duckduckgo.com/?q={query}&df=w"
                         
                         logger.info(f"Google/DDG X-Ray [{keyword} | {location}]: Searching...")

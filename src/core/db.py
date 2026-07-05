@@ -328,6 +328,20 @@ class Database:
             if self.conn:
                 self.conn.rollback()
 
+    def clear_user_matches(self, user_id: str):
+        try:
+            cur = self.conn.cursor()
+            if self.is_sqlite:
+                cur.execute("DELETE FROM job_matches WHERE user_id = ?", (user_id,))
+            else:
+                cur.execute("DELETE FROM job_matches WHERE user_id = %s", (user_id,))
+            self.conn.commit()
+            cur.close()
+        except Exception as e:
+            logger.error(f"Error clearing matches: {e}")
+            if self.conn:
+                self.conn.rollback()
+
     def save_match(self, user_id: str, match_data: dict):
         try:
             if self.is_sqlite:

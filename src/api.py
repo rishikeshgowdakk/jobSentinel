@@ -193,6 +193,10 @@ async def update_preferences(prefs: Preferences, request: Request):
     db.set_setting(user_id, "locations", prefs.locations)
     db.set_setting(user_id, "job_type", prefs.job_type)
     db.set_setting(user_id, "experience_level", prefs.experience_level)
+    
+    # Clear old job matches so the feed is fresh and reflects the new config!
+    db.clear_user_matches(user_id)
+    
     return {"status": "success", "message": "Preferences updated"}
 
 @app.post("/api/resume/upload")
@@ -237,6 +241,17 @@ async def upload_resume(background_tasks: BackgroundTasks, request: Request, fil
         logger.info(f"Extracting structured details from uploaded resume for user {user_id}...")
         structured_data = analyzer.extract_resume_parameters(text)
         
+        # Auto-tune scraper keywords
+        current_role = structured_data.get("current_role", "")
+        top_skills = structured_data.get("skills", [])[:3]
+        new_kw = []
+        if current_role and current_role not in ["Candidate Profile", "Software Engineer"]:
+            new_kw.append(current_role)
+        new_kw.extend(top_skills)
+        if new_kw:
+            db.set_setting(user_id, "keywords", ", ".join(new_kw))
+            logger.info(f"Auto-tuned scraper keywords to: {', '.join(new_kw)}")
+        
         logger.info(f"Generating semantic embeddings for resume of user {user_id}...")
         embedding = analyzer.get_embedding(text)
         
@@ -276,6 +291,17 @@ async def paste_resume(req: PasteResume, background_tasks: BackgroundTasks, requ
         analyzer = GeminiAnalyzer()
         logger.info(f"Extracting structured details from pasted resume for user {user_id}...")
         structured_data = analyzer.extract_resume_parameters(text)
+        
+        # Auto-tune scraper keywords
+        current_role = structured_data.get("current_role", "")
+        top_skills = structured_data.get("skills", [])[:3]
+        new_kw = []
+        if current_role and current_role not in ["Candidate Profile", "Software Engineer"]:
+            new_kw.append(current_role)
+        new_kw.extend(top_skills)
+        if new_kw:
+            db.set_setting(user_id, "keywords", ", ".join(new_kw))
+            logger.info(f"Auto-tuned scraper keywords to: {', '.join(new_kw)}")
         
         logger.info(f"Generating semantic embeddings for pasted resume of user {user_id}...")
         embedding = analyzer.get_embedding(text)

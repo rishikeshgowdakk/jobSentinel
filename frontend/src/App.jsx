@@ -505,124 +505,9 @@ function App() {
             </div>
 
             {/* ROW 1: AI Insights, Balance Overview (Line Chart), Earnings (Radial Gauge) */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8">
+            <div className="grid grid-cols-1 md:grid-cols-1 gap-6 lg:gap-8">
               
-              {/* Card A: AI Insights (Mesh Gradient Card) */}
-              <div className="bg-mesh-mono p-7 rounded-[24px] text-slate-800 dark:text-white flex flex-col justify-between h-[280px] shadow-[0_12px_36px_rgba(0,0,0,0.02)] dark:shadow-[0_12px_36px_rgba(255,255,255,0.01)] relative overflow-hidden group">
-                <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full blur-xl pointer-events-none" />
-                <div className="space-y-4 relative z-10">
-                  <div className="flex justify-between items-center">
-                    <span className="px-3 py-1 bg-black/5 dark:bg-white/10 border border-black/10 dark:border-white/10 backdrop-blur-md rounded-full text-[9px] font-bold tracking-widest text-slate-600 dark:text-slate-300 uppercase">
-                      AI Insights
-                    </span>
-                    <Sparkles size={16} className="text-slate-500 dark:text-slate-300" />
-                  </div>
-                  <div className="space-y-2">
-                    <h4 className="text-sm font-bold text-slate-900 dark:text-slate-100 tracking-wide">Career Compatibility</h4>
-                    <div className="relative h-[4.5rem] overflow-hidden">
-                      <div 
-                        className="absolute w-full transition-all duration-700 ease-in-out"
-                        style={{ transform: `translateY(-${insightIndex * 4.5}rem)` }}
-                      >
-                        {aiInsightsList.map((insight, idx) => (
-                          <div key={idx} className="h-[4.5rem] flex items-start">
-                            <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed font-light pr-2">
-                              {insight}
-                            </p>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="flex justify-between items-center pt-2 relative z-10">
-                  {/* Page indicator dots */}
-                  <div className="flex gap-1.5">
-                    {[0, 1, 2, 3].map(i => (
-                      <span 
-                        key={i} 
-                        className={`h-1.5 rounded-full transition-all duration-500 ${insightIndex === i ? 'bg-black dark:bg-white w-3' : 'bg-black/30 dark:bg-white/45 w-1.5'}`}
-                      />
-                    ))}
-                  </div>
-                  <button 
-                    onClick={() => setActiveTab('critique')}
-                    className="w-8 h-8 rounded-full bg-black/5 dark:bg-white/10 hover:bg-black/15 dark:hover:bg-white/20 flex items-center justify-center transition-all border border-black/10 dark:border-white/5 group-hover:scale-105 active:scale-95 cursor-pointer"
-                    title="Optimize ATS Resume"
-                  >
-                    <ArrowUpRight size={14} className="text-black dark:text-white" />
-                  </button>
-                </div>
-              </div>
 
-              {/* Card B: Match Trends (SVG Line Chart) */}
-              <div className="carbon-panel p-7 flex flex-col justify-between h-[280px]">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
-                      Match Telemetry
-                    </span>
-                    <h3 className="text-sm font-bold text-slate-800 dark:text-white tracking-wide">Match Success</h3>
-                  </div>
-                  <div className="text-right">
-                    <span className="text-xs font-bold text-neutral-900 dark:text-white font-mono">+{analytics.successRate}%</span>
-                    <span className="text-[9px] text-slate-500 block">since scan</span>
-                  </div>
-                </div>
-                
-                {/* Beautiful SVG line chart with animations */}
-                <div className="flex-1 w-full flex items-end justify-center relative min-h-[120px] pt-4 text-neutral-800 dark:text-slate-200">
-                  <svg className="w-full h-full min-h-[100px]" viewBox="0 0 300 100" preserveAspectRatio="none">
-                    <defs>
-                      <linearGradient id="chartGradient" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="currentColor" stopOpacity="0.15" />
-                        <stop offset="100%" stopColor="currentColor" stopOpacity="0.0" />
-                      </linearGradient>
-                    </defs>
-                    
-                    {/* Grid lines */}
-                    <line x1="0" y1="20" x2="300" y2="20" stroke="rgba(128,128,128,0.05)" strokeDasharray="3,3" />
-                    <line x1="0" y1="50" x2="300" y2="50" stroke="rgba(128,128,128,0.05)" strokeDasharray="3,3" />
-                    <line x1="0" y1="80" x2="300" y2="80" stroke="rgba(128,128,128,0.05)" strokeDasharray="3,3" />
-                    
-                    {/* Area under the curve */}
-                    <path 
-                      d="M0,90 Q40,65 80,75 T160,35 T240,45 T300,20 L300,100 L0,100 Z" 
-                      fill="url(#chartGradient)" 
-                      className="animate-svg-dash"
-                    />
-                    
-                    {/* Curve path */}
-                    <path 
-                      d="M0,90 Q40,65 80,75 T160,35 T240,45 T300,20" 
-                      fill="none" 
-                      stroke="currentColor" 
-                      strokeWidth="2.5" 
-                      strokeLinecap="round"
-                      className="animate-svg-dash"
-                    />
-                    
-                    {/* Interactive dots along the path */}
-                    <circle cx="160" cy="35" r="4" fill="currentColor" stroke="currentColor" strokeWidth="2" className="cursor-pointer hover:r-6 transition-all text-black dark:text-white" />
-                    <circle cx="300" cy="20" r="4" fill="currentColor" stroke="currentColor" strokeWidth="2" className="text-black dark:text-white" />
-                  </svg>
-                </div>
-                
-                {/* X-axis labels */}
-                <div className="flex justify-between text-[9px] text-slate-500 font-mono pt-3 border-t border-slate-200 dark:border-slate-900/40">
-                  <span>15</span>
-                  <span>16</span>
-                  <span>17</span>
-                  <span>18</span>
-                  <span>19</span>
-                  <span className="text-neutral-900 dark:text-slate-100 font-bold">20</span>
-                  <span>21</span>
-                  <span>22</span>
-                  <span>23</span>
-                  <span>24</span>
-                </div>
-              </div>
 
               {/* Card C: ATS Compatibility Score (Monochrome Radial Progress Gauge) */}
               <div className="carbon-panel p-7 flex flex-col justify-between h-[280px]">
@@ -694,7 +579,7 @@ function App() {
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8">
               
               {/* Left Side: Recent Discoveries (2/3 width) */}
-              <div className="lg:col-span-8 carbon-panel p-7 space-y-6 flex flex-col justify-between min-h-[380px]">
+              <div className="lg:col-span-12 carbon-panel p-7 space-y-6 flex flex-col justify-between min-h-[380px]">
                 <div className="flex justify-between items-center border-b border-slate-200 dark:border-slate-900/60 pb-4">
                   <div>
                     <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
@@ -716,7 +601,7 @@ function App() {
                 </div>
                 
                 <div className="flex-grow overflow-y-auto space-y-3 pr-1 max-h-[260px] scrollbar-thin">
-                  {jobs.slice(0, 5).map((job, idx) => {
+                  {filteredJobs.slice(0, 5).map((job, idx) => {
                     // Pick a clean, monochrome gradient for company logo placeholder
                     const grads = [
                       'from-slate-800 to-slate-900 dark:from-slate-200 dark:to-slate-400',
@@ -755,14 +640,6 @@ function App() {
                           <span className="text-[10px] text-slate-400 font-medium">
                             {job.experience ? job.experience.split(' ')[0] : 'Experienced'}
                           </span>
-                          <div className="text-right">
-                            <span className={`text-xs font-bold font-mono ${job.matchScore >= 80 ? 'text-black dark:text-white' : 'text-slate-500 dark:text-slate-400'}`}>
-                              +{job.matchScore || 0}%
-                            </span>
-                            <span className="text-[8px] text-slate-500 uppercase tracking-widest block font-bold">
-                              Match
-                            </span>
-                          </div>
                         </div>
                       </div>
                     );
@@ -776,77 +653,13 @@ function App() {
                 </div>
               </div>
 
-              {/* Right Side: Market Splits (1/3 width) */}
-              <div className="lg:col-span-4 carbon-panel p-7 space-y-6 flex flex-col justify-between min-h-[380px]">
-                <div className="border-b border-slate-200 dark:border-slate-900/60 pb-4">
-                  <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
-                    Career Splits
-                  </span>
-                  <h3 className="text-sm font-bold text-slate-800 dark:text-white tracking-wide">Market Demand</h3>
-                </div>
-                
-                {marketInsights ? (
-                  <div className="flex-grow space-y-5 flex flex-col justify-center">
-                    <div>
-                      <div className="flex justify-between text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">
-                        <span>Junior / Fresher</span>
-                        <span className="font-mono text-black dark:text-white font-bold">{marketInsights.experienceDemands?.junior || 0}%</span>
-                      </div>
-                      <div className="w-full h-1.5 bg-slate-200 dark:bg-slate-900 rounded-full overflow-hidden">
-                        <div className="h-full bg-gradient-to-r from-slate-800 to-black dark:from-slate-300 dark:to-white rounded-full transition-all duration-750" style={{ width: `${marketInsights.experienceDemands?.junior || 0}%` }}></div>
-                      </div>
-                    </div>
-
-                    <div>
-                      <div className="flex justify-between text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">
-                        <span>Mid Level</span>
-                        <span className="font-mono text-black dark:text-white font-bold">{marketInsights.experienceDemands?.mid || 0}%</span>
-                      </div>
-                      <div className="w-full h-1.5 bg-slate-200 dark:bg-slate-900 rounded-full overflow-hidden">
-                        <div className="h-full bg-gradient-to-r from-slate-600 to-slate-800 dark:from-slate-400 dark:to-slate-200 rounded-full transition-all duration-750" style={{ width: `${marketInsights.experienceDemands?.mid || 0}%` }}></div>
-                      </div>
-                    </div>
-
-                    <div>
-                      <div className="flex justify-between text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">
-                        <span>Senior / Staff</span>
-                        <span className="font-mono text-black dark:text-white font-bold">{marketInsights.experienceDemands?.senior || 0}%</span>
-                      </div>
-                      <div className="w-full h-1.5 bg-slate-200 dark:bg-slate-900 rounded-full overflow-hidden">
-                        <div className="h-full bg-gradient-to-r from-slate-400 to-slate-600 dark:from-slate-500 dark:to-slate-300 rounded-full transition-all duration-750" style={{ width: `${marketInsights.experienceDemands?.senior || 0}%` }}></div>
-                      </div>
-                    </div>
-                    
-                    {/* Bottom Category Badges */}
-                    <div className="grid grid-cols-3 gap-2.5 pt-3 border-t border-slate-200 dark:border-slate-900/60 mt-2">
-                      <div className="bg-slate-100 dark:bg-slate-900/50 p-2 border border-slate-200 dark:border-slate-900 rounded-xl text-center">
-                        <span className="text-[8px] text-slate-500 uppercase block">Intern</span>
-                        <span className="text-xs font-bold text-slate-800 dark:text-slate-200 font-mono mt-0.5 block">{marketInsights.jobTypeDemands?.internship || 0}%</span>
-                      </div>
-                      <div className="bg-slate-100 dark:bg-slate-900/50 p-2 border border-slate-200 dark:border-slate-900 rounded-xl text-center">
-                        <span className="text-[8px] text-slate-500 uppercase block">Fulltime</span>
-                        <span className="text-xs font-bold text-slate-800 dark:text-slate-200 font-mono mt-0.5 block">{marketInsights.jobTypeDemands?.fulltime || 0}%</span>
-                      </div>
-                      <div className="bg-slate-100 dark:bg-slate-900/50 p-2 border border-slate-200 dark:border-slate-900 rounded-xl text-center">
-                        <span className="text-[8px] text-slate-500 uppercase block">Contract</span>
-                        <span className="text-xs font-bold text-slate-800 dark:text-slate-200 font-mono mt-0.5 block">{marketInsights.jobTypeDemands?.contract || 0}%</span>
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="flex-grow flex items-center justify-center text-slate-600 text-[11px] text-center font-light py-8">
-                    Loading demand aggregates from telemetry stream...
-                  </div>
-                )}
-              </div>
-
             </div>
 
             {/* ROW 3: Config Panel & Real-time Logs Console */}
             <div id="hunt-config-section" className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8">
               
               {/* Config Form (1/2 width) */}
-              <div className="lg:col-span-6 carbon-panel p-7 space-y-6">
+              <div className="lg:col-span-12 carbon-panel p-7 space-y-6">
                 <div>
                   <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider block mb-1">01 . Config</span>
                   <h3 className="text-sm font-bold text-slate-800 dark:text-white tracking-wide">Hunt Parameters</h3>
@@ -889,70 +702,8 @@ function App() {
                 </div>
               </div>
 
-              {/* Logs Console (1/2 width) */}
-              <div className="lg:col-span-6 carbon-panel p-7 flex flex-col justify-between h-auto min-h-[360px]">
-                <div className="mb-4">
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider block mb-1">02 . Console</span>
-                      <h3 className="text-sm font-bold text-slate-800 dark:text-white tracking-wide">System Stream Logs</h3>
-                    </div>
-                    <div className="flex items-center gap-2 px-2.5 py-1 bg-black/5 dark:bg-white/10 border border-black/10 dark:border-white/20 rounded-full">
-                      <span className="w-1.5 h-1.5 rounded-full bg-black dark:bg-white animate-ping"></span>
-                      <span className="text-[8px] font-bold text-black dark:text-white uppercase tracking-widest">Streaming</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex-grow bg-slate-950 dark:bg-slate-950/80 border border-slate-300 dark:border-slate-900/60 p-4 font-mono text-[9.5px] rounded-2xl overflow-y-auto space-y-2 leading-relaxed h-[220px] scrollbar-thin scanner-glow">
-                  {logs.map((log, i) => (
-                    <div key={i} className="text-slate-400 break-all border-b border-white/[0.01] pb-1.5">
-                      <span className="text-slate-500 dark:text-slate-400 mr-2">[{new Date().toLocaleTimeString()}]</span>
-                      {log}
-                    </div>
-                  ))}
-                  {logs.length === 0 && (
-                    <div className="text-slate-700 flex items-center justify-center h-full gap-2">
-                      <Terminal size={14} className="animate-pulse" />
-                      <span>Awaiting scanning loops and network handshakes...</span>
-                    </div>
-                  )}
-                  <div ref={logEndRef} />
-                </div>
-              </div>
-
             </div>
 
-            {/* Bottom Section: Pipeline Tracker */}
-            <div className="carbon-panel p-7 space-y-5">
-              <div>
-                <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
-                  03 . Pipeline
-                </span>
-                <h3 className="text-sm font-bold text-slate-800 dark:text-white tracking-wide">Application Journey</h3>
-              </div>
-              
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {[
-                  { label: 'Crawled Jobs', val: analytics.totalJobs, color: 'text-slate-700 dark:text-slate-300', filter: 'All' },
-                  { label: 'Match ≥ 80%', val: analytics.matchedCount, color: 'text-neutral-900 dark:text-white', filter: 'Match80' },
-                  { label: 'Saved Hunt', val: analytics.savedCount, color: 'text-slate-700 dark:text-slate-300', filter: 'saved' },
-                  { label: 'Applied', val: analytics.appliedCount, color: 'text-neutral-700 dark:text-neutral-300', filter: 'applied' }
-                ].map((item, index) => (
-                  <div 
-                    key={index} 
-                    onClick={() => handlePipelineClick(item.filter)}
-                    className={`cursor-pointer p-4 bg-slate-100/50 dark:bg-slate-900/25 border rounded-2xl text-center shadow-[inset_0_0_12px_rgba(255,255,255,0.01)] transition-all duration-300 ${pipelineFilter === item.filter ? 'border-neutral-500 dark:border-neutral-500 bg-slate-200/50 dark:bg-slate-800/50 ring-1 ring-neutral-500/20' : 'border-slate-200 dark:border-slate-900 hover:border-slate-300 dark:hover:border-slate-800/80'}`}>
-                    <span className="text-[8px] font-bold text-slate-500 uppercase tracking-widest block mb-1">
-                      {item.label}
-                    </span>
-                    <span className={`text-2xl font-black font-mono ${item.color}`}>
-                      {item.val}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
 
           </div>
         )}
