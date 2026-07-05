@@ -353,18 +353,7 @@ function App() {
       <aside className="w-full lg:w-[360px] border-r border-slate-200 dark:border-slate-900/60 bg-slate-50/50 dark:bg-slate-950/45 backdrop-blur-xl p-8 flex flex-col justify-between shrink-0 relative z-10 select-none">
         <div className="space-y-8">
           
-          {/* Top Panel: Mac Window Controls & Logo */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <span className="w-3 h-3 rounded-full bg-[#ff5f56] opacity-90 transition-opacity hover:opacity-100 cursor-pointer"></span>
-              <span className="w-3 h-3 rounded-full bg-[#ffbd2e] opacity-90 transition-opacity hover:opacity-100 cursor-pointer"></span>
-              <span className="w-3 h-3 rounded-full bg-[#27c93f] opacity-90 transition-opacity hover:opacity-100 cursor-pointer"></span>
-            </div>
-            <div className="flex items-center gap-1.5 px-3 py-1 bg-slate-200/50 dark:bg-white/5 border border-slate-300 dark:border-white/10 text-slate-600 dark:text-slate-400 rounded-full">
-              <div className="w-1.5 h-1.5 rounded-full bg-slate-500 dark:bg-slate-400 animate-pulse"></div>
-              <span className="text-[9px] font-bold uppercase tracking-widest">v2.4</span>
-            </div>
-          </div>
+
 
           <div className="space-y-1.5 pt-2">
             <h1 className="text-2xl font-black tracking-wider text-black dark:text-white font-sans flex items-center gap-2.5">
@@ -379,7 +368,7 @@ function App() {
           <div className="thin-accent-line" />
 
           {/* User Welcome & Theme Toggles Card */}
-          <div className="flex items-center justify-between p-4 bg-slate-200/30 dark:bg-slate-900/40 border border-slate-350/40 dark:border-slate-900/60 rounded-2xl">
+          <div className="flex items-center justify-between p-4 bg-slate-200/30 dark:bg-slate-900/40 border border-slate-300/40 dark:border-slate-900/60 rounded-2xl">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-neutral-800 to-neutral-600 dark:from-neutral-300 dark:to-neutral-500 text-white dark:text-slate-950 flex items-center justify-center font-bold text-sm shadow-md shadow-black/10 dark:shadow-white/5">
                 {profile?.name ? profile.name.slice(0, 2).toUpperCase() : <User size={16} />}
@@ -393,22 +382,7 @@ function App() {
                 </h3>
               </div>
             </div>
-            <div className="flex items-center gap-1 bg-slate-300/30 dark:bg-slate-950 p-1 rounded-xl border border-slate-300/60 dark:border-slate-900">
-              <button 
-                onClick={() => setTheme('dark')}
-                className={`p-1.5 rounded-lg transition-all ${theme === 'dark' ? 'text-white bg-slate-900 dark:bg-neutral-800 border border-slate-800/40 dark:border-neutral-700/60 shadow-sm' : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-300'}`} 
-                title="Dark Mode"
-              >
-                <Moon size={11} />
-              </button>
-              <button 
-                onClick={() => setTheme('light')}
-                className={`p-1.5 rounded-lg transition-all ${theme === 'light' ? 'text-black bg-white border border-slate-200 shadow-sm' : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-350'}`} 
-                title="Light Mode"
-              >
-                <Sun size={11} />
-              </button>
-            </div>
+
           </div>
 
           {/* Navigation Menu */}
@@ -450,18 +424,18 @@ function App() {
           <div className="space-y-2">
             <div className="flex items-center gap-2">
               <input type="file" id="resume-upload" className="hidden" accept=".pdf,.txt,.md" onChange={handleFileUpload} disabled={uploading} />
-              <label htmlFor="resume-upload" className="flex-1 text-center py-2.5 bg-slate-200/60 dark:bg-slate-900 hover:bg-slate-350 dark:hover:bg-slate-800 border border-slate-300 dark:border-slate-800 text-slate-800 dark:text-slate-250 font-semibold text-[10px] uppercase tracking-wider rounded-xl cursor-pointer hover:-translate-y-0.5 active:translate-y-0 transition-all duration-300 select-none">
+              <label htmlFor="resume-upload" className="flex-1 text-center py-2.5 bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-600 text-slate-900 dark:text-white font-semibold text-[10px] uppercase tracking-wider rounded-xl cursor-pointer hover:-translate-y-1 hover:shadow-lg active:scale-95 transition-all duration-300 select-none">
                 {uploading ? 'Parsing...' : 'Upload CV'}
               </label>
               <button 
                 onClick={() => setShowPasteModal(true)} 
-                className="flex-1 text-center py-2.5 bg-slate-200/60 dark:bg-slate-900 hover:bg-slate-350 dark:hover:bg-slate-800 border border-slate-300 dark:border-slate-800 text-slate-800 dark:text-slate-250 font-semibold text-[10px] uppercase tracking-wider rounded-xl hover:-translate-y-0.5 active:translate-y-0 transition-all duration-300"
+                className="flex-1 text-center py-2.5 bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-600 text-slate-900 dark:text-white font-semibold text-[10px] uppercase tracking-wider rounded-xl cursor-pointer hover:-translate-y-1 hover:shadow-lg active:scale-95 transition-all duration-300 select-none"
               >
                 Paste CV
               </button>
               <button 
                 onClick={loadAllData} 
-                className="p-2.5 bg-slate-200/60 dark:bg-slate-900 hover:bg-slate-350 dark:hover:bg-slate-800 border border-slate-300 dark:border-slate-800 text-slate-650 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-xl transition-all duration-300"
+                className="p-2.5 bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-white hover:text-slate-900 rounded-xl cursor-pointer hover:-translate-y-1 hover:shadow-lg active:scale-95 transition-all duration-300 select-none"
                 title="Force reload telemetry"
               >
                 <RefreshCw size={11} className={loading ? 'animate-spin' : ''} />
@@ -471,7 +445,7 @@ function App() {
             {/* Global Message Banner */}
             {message && (
               <div className={`p-2.5 text-[9px] uppercase font-bold tracking-wider text-center rounded-xl transition-all duration-300 ${
-                isError ? 'bg-red-950/20 border border-red-900/30 text-red-400' : 'bg-slate-200/40 dark:bg-indigo-950/25 border border-slate-300 dark:border-indigo-900/20 text-slate-800 dark:text-slate-200'
+                isError ? 'bg-black/10 dark:bg-white/10 border border-black/30 dark:border-white/30 text-black dark:text-white' : 'bg-slate-200/40 dark:bg-slate-800/25 border border-slate-300 dark:border-slate-700/20 text-slate-800 dark:text-slate-200'
               }`}>
                 {message}
               </div>
@@ -480,20 +454,23 @@ function App() {
 
           <div className="thin-accent-line" />
 
-          {/* NeuroBank Pro Style upgrade Card */}
-          <div className="bg-mesh-purple border border-slate-300 dark:border-indigo-950/30 p-5 rounded-3xl relative overflow-hidden group shadow-[0_8px_32px_rgba(255,255,255,0.01)]">
+          {/* Pro Style upgrade Card */}
+          <div className="bg-mesh-mono border border-slate-300 dark:border-slate-800 p-5 rounded-3xl relative overflow-hidden group shadow-[0_8px_32px_rgba(255,255,255,0.01)]">
             <div className="absolute -right-6 -bottom-6 w-24 h-24 bg-white/5 rounded-full blur-xl group-hover:bg-white/10 transition-all duration-500"></div>
             <div className="relative z-10 space-y-3.5">
               <div className="flex items-center gap-2">
-                <Sparkles size={13} className="text-slate-700 dark:text-indigo-400" />
-                <span className="text-[9px] font-bold tracking-[0.15em] text-slate-800 dark:text-indigo-300 uppercase">
+                <Sparkles size={13} className="text-black dark:text-white" />
+                <span className="text-[9px] font-bold tracking-[0.15em] text-black dark:text-white uppercase">
                   JobSentinel Pro
                 </span>
               </div>
               <p className="text-[10px] text-slate-600 dark:text-slate-400 leading-normal font-light">
                 Elevate your career search with fully autonomous search, crawl loops, and email auto-outreach.
               </p>
-              <button className="w-full py-2.5 bg-black dark:bg-white hover:bg-neutral-800 dark:hover:bg-slate-200 text-white dark:text-slate-950 rounded-xl text-[9px] font-bold uppercase tracking-wider transition-all duration-300 shadow-md">
+              <button 
+                onClick={() => alert("JobSentinel Pro integration coming soon!")}
+                className="w-full py-2.5 bg-black dark:bg-white hover:bg-neutral-800 dark:hover:bg-slate-200 text-white dark:text-slate-950 rounded-xl text-[9px] font-bold uppercase tracking-wider transition-all duration-300 shadow-md hover:-translate-y-1 hover:shadow-lg active:scale-95 cursor-pointer"
+              >
                 Elevate career with AI
               </button>
             </div>
@@ -516,7 +493,7 @@ function App() {
               </div>
               <div className="flex items-center gap-3 w-full md:w-auto justify-end">
                 <div className="relative">
-                  <select className="bg-white dark:bg-slate-900/80 border border-slate-250 dark:border-slate-800/80 text-xs px-3.5 py-2 rounded-xl text-slate-700 dark:text-slate-350 pr-8 appearance-none cursor-pointer">
+                  <select className="bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800/80 text-xs px-3.5 py-2 rounded-xl text-slate-700 dark:text-slate-300 pr-8 appearance-none cursor-pointer">
                     <option>This Month</option>
                     <option>Last 30 Days</option>
                     <option>All-Time</option>
@@ -545,11 +522,11 @@ function App() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8">
               
               {/* Card A: AI Insights (Mesh Gradient Card) */}
-              <div className="bg-mesh-purple p-7 rounded-[24px] text-slate-800 dark:text-white flex flex-col justify-between h-[280px] shadow-[0_12px_36px_rgba(0,0,0,0.02)] dark:shadow-[0_12px_36px_rgba(255,255,255,0.01)] relative overflow-hidden group">
+              <div className="bg-mesh-mono p-7 rounded-[24px] text-slate-800 dark:text-white flex flex-col justify-between h-[280px] shadow-[0_12px_36px_rgba(0,0,0,0.02)] dark:shadow-[0_12px_36px_rgba(255,255,255,0.01)] relative overflow-hidden group">
                 <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full blur-xl pointer-events-none" />
                 <div className="space-y-4 relative z-10">
                   <div className="flex justify-between items-center">
-                    <span className="px-3 py-1 bg-black/5 dark:bg-white/10 border border-black/10 dark:border-white/10 backdrop-blur-md rounded-full text-[9px] font-bold tracking-widest text-slate-650 dark:text-slate-350 uppercase">
+                    <span className="px-3 py-1 bg-black/5 dark:bg-white/10 border border-black/10 dark:border-white/10 backdrop-blur-md rounded-full text-[9px] font-bold tracking-widest text-slate-600 dark:text-slate-300 uppercase">
                       AI Insights
                     </span>
                     <Sparkles size={16} className="text-slate-500 dark:text-slate-300" />
@@ -663,7 +640,7 @@ function App() {
                   </div>
                   <button 
                     onClick={() => setActiveTab('critique')}
-                    className="p-1.5 bg-slate-200/60 dark:bg-slate-900 border border-slate-350 dark:border-slate-800 text-slate-500 hover:text-slate-900 dark:hover:text-white rounded-xl transition-all cursor-pointer"
+                    className="p-1.5 bg-slate-200/60 dark:bg-slate-900 border border-slate-300 dark:border-slate-800 text-slate-500 hover:text-slate-900 dark:hover:text-white rounded-xl transition-all cursor-pointer"
                     title="Critique details"
                   >
                     <ArrowUpRight size={13} />
@@ -707,7 +684,7 @@ function App() {
                   </div>
                 </div>
                 
-                <div className="flex justify-between items-center text-[10px] text-slate-450 font-light border-t border-slate-200 dark:border-slate-900/60 pt-3">
+                <div className="flex justify-between items-center text-[10px] text-slate-400 font-light border-t border-slate-200 dark:border-slate-900/60 pt-3">
                   <div className="flex items-center gap-1.5">
                     <div className="w-1.5 h-1.5 rounded-full bg-neutral-900 dark:bg-white"></div>
                     <span>Target Score</span>
@@ -732,7 +709,7 @@ function App() {
                   </div>
                   <button 
                     onClick={() => setActiveTab('jobs')}
-                    className="text-[10px] font-bold text-slate-900 dark:text-indigo-400 hover:text-slate-700 dark:hover:text-indigo-300 uppercase tracking-wider flex items-center gap-1 transition-colors cursor-pointer"
+                    className="text-[10px] font-bold text-black dark:text-white hover:text-slate-700 dark:hover:text-slate-300 uppercase tracking-wider flex items-center gap-1 transition-colors cursor-pointer"
                   >
                     <span>View All</span>
                     <ChevronRight size={12} />
@@ -741,13 +718,13 @@ function App() {
                 
                 <div className="flex-grow overflow-y-auto space-y-3 pr-1 max-h-[260px] scrollbar-thin">
                   {jobs.slice(0, 5).map((job, idx) => {
-                    // Pick a clean, vibrant gradient for company logo placeholder
+                    // Pick a clean, monochrome gradient for company logo placeholder
                     const grads = [
-                      'from-pink-500 to-indigo-500',
-                      'from-cyan-400 to-blue-600',
-                      'from-purple-500 to-indigo-600',
-                      'from-amber-400 to-red-500',
-                      'from-emerald-400 to-teal-600'
+                      'from-slate-800 to-slate-900 dark:from-slate-200 dark:to-slate-400',
+                      'from-neutral-700 to-neutral-900 dark:from-neutral-300 dark:to-neutral-500',
+                      'from-gray-700 to-gray-900 dark:from-gray-300 dark:to-gray-500',
+                      'from-zinc-700 to-zinc-900 dark:from-zinc-300 dark:to-zinc-500',
+                      'from-stone-700 to-stone-900 dark:from-stone-300 dark:to-stone-500'
                     ];
                     const grad = grads[idx % grads.length];
                     
@@ -758,7 +735,7 @@ function App() {
                       >
                         <div className="flex items-center gap-3.5 min-w-0">
                           {/* Logo Badge */}
-                          <div className={`w-10 h-10 rounded-xl bg-gradient-to-tr ${grad} flex items-center justify-center text-white font-black text-xs shrink-0 shadow-md`}>
+                          <div className={`w-10 h-10 rounded-xl bg-gradient-to-tr ${grad} flex items-center justify-center text-white dark:text-slate-900 font-black text-xs shrink-0 shadow-md`}>
                             {job.company ? job.company.slice(0, 2).toUpperCase() : 'JB'}
                           </div>
                           <div className="min-w-0">
@@ -766,7 +743,7 @@ function App() {
                               {job.title}
                             </h4>
                             <p className="text-[10px] text-slate-500 font-medium tracking-wide">
-                              {job.company} &bull; <span className="text-slate-900/70 dark:text-indigo-400/70">{job.source}</span>
+                              {job.company} &bull; <span className="text-slate-900/70 dark:text-slate-300/70">{job.source}</span>
                             </p>
                           </div>
                         </div>
@@ -779,7 +756,7 @@ function App() {
                             {job.experience ? job.experience.split(' ')[0] : 'Experienced'}
                           </span>
                           <div className="text-right">
-                            <span className={`text-xs font-bold font-mono ${job.matchScore >= 80 ? 'text-emerald-500 dark:text-emerald-400' : 'text-slate-500 dark:text-slate-350'}`}>
+                            <span className={`text-xs font-bold font-mono ${job.matchScore >= 80 ? 'text-black dark:text-white' : 'text-slate-500 dark:text-slate-400'}`}>
                               +{job.matchScore || 0}%
                             </span>
                             <span className="text-[8px] text-slate-500 uppercase tracking-widest block font-bold">
@@ -791,7 +768,7 @@ function App() {
                     );
                   })}
                   {jobs.length === 0 && (
-                    <div className="flex flex-col items-center justify-center py-12 text-slate-550">
+                    <div className="flex flex-col items-center justify-center py-12 text-slate-500">
                       <Briefcase size={24} className="text-slate-700 mb-2" />
                       <span className="text-xs font-light">No crawled positions logged in database yet.</span>
                     </div>
@@ -813,30 +790,30 @@ function App() {
                     <div>
                       <div className="flex justify-between text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">
                         <span>Junior / Fresher</span>
-                        <span className="font-mono text-slate-900 dark:text-indigo-400 font-bold">{marketInsights.experienceDemands?.junior || 0}%</span>
+                        <span className="font-mono text-black dark:text-white font-bold">{marketInsights.experienceDemands?.junior || 0}%</span>
                       </div>
                       <div className="w-full h-1.5 bg-slate-200 dark:bg-slate-900 rounded-full overflow-hidden">
-                        <div className="h-full bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full transition-all duration-750" style={{ width: `${marketInsights.experienceDemands?.junior || 0}%` }}></div>
+                        <div className="h-full bg-gradient-to-r from-slate-800 to-black dark:from-slate-300 dark:to-white rounded-full transition-all duration-750" style={{ width: `${marketInsights.experienceDemands?.junior || 0}%` }}></div>
                       </div>
                     </div>
 
                     <div>
                       <div className="flex justify-between text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">
                         <span>Mid Level</span>
-                        <span className="font-mono text-slate-900 dark:text-indigo-400 font-bold">{marketInsights.experienceDemands?.mid || 0}%</span>
+                        <span className="font-mono text-black dark:text-white font-bold">{marketInsights.experienceDemands?.mid || 0}%</span>
                       </div>
                       <div className="w-full h-1.5 bg-slate-200 dark:bg-slate-900 rounded-full overflow-hidden">
-                        <div className="h-full bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full transition-all duration-750" style={{ width: `${marketInsights.experienceDemands?.mid || 0}%` }}></div>
+                        <div className="h-full bg-gradient-to-r from-slate-600 to-slate-800 dark:from-slate-400 dark:to-slate-200 rounded-full transition-all duration-750" style={{ width: `${marketInsights.experienceDemands?.mid || 0}%` }}></div>
                       </div>
                     </div>
 
                     <div>
                       <div className="flex justify-between text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">
                         <span>Senior / Staff</span>
-                        <span className="font-mono text-slate-900 dark:text-indigo-400 font-bold">{marketInsights.experienceDemands?.senior || 0}%</span>
+                        <span className="font-mono text-black dark:text-white font-bold">{marketInsights.experienceDemands?.senior || 0}%</span>
                       </div>
                       <div className="w-full h-1.5 bg-slate-200 dark:bg-slate-900 rounded-full overflow-hidden">
-                        <div className="h-full bg-gradient-to-r from-purple-500 to-pink-500 rounded-full transition-all duration-750" style={{ width: `${marketInsights.experienceDemands?.senior || 0}%` }}></div>
+                        <div className="h-full bg-gradient-to-r from-slate-400 to-slate-600 dark:from-slate-500 dark:to-slate-300 rounded-full transition-all duration-750" style={{ width: `${marketInsights.experienceDemands?.senior || 0}%` }}></div>
                       </div>
                     </div>
                     
@@ -857,7 +834,7 @@ function App() {
                     </div>
                   </div>
                 ) : (
-                  <div className="flex-grow flex items-center justify-center text-slate-650 text-[11px] text-center font-light py-8">
+                  <div className="flex-grow flex items-center justify-center text-slate-600 text-[11px] text-center font-light py-8">
                     Loading demand aggregates from telemetry stream...
                   </div>
                 )}
@@ -906,7 +883,7 @@ function App() {
                     </div>
                   </div>
 
-                  <button onClick={savePreferences} disabled={savingPrefs} className="w-full py-3 bg-black dark:bg-white hover:bg-neutral-800 dark:hover:bg-slate-200 text-white dark:text-slate-955 font-bold text-[10px] uppercase tracking-widest rounded-xl transition-all duration-300 hover:-translate-y-0.5 active:translate-y-0 cursor-pointer mt-2 shadow-md">
+                  <button onClick={savePreferences} disabled={savingPrefs} className="w-full py-3 bg-black dark:bg-white hover:bg-neutral-800 dark:hover:bg-slate-200 text-white dark:text-slate-950 font-bold text-[10px] uppercase tracking-widest rounded-xl transition-all duration-300 hover:-translate-y-0.5 active:translate-y-0 cursor-pointer mt-2 shadow-md">
                     {savingPrefs ? 'Syncing Parameters...' : 'Save Configuration'}
                   </button>
                 </div>
@@ -920,9 +897,9 @@ function App() {
                       <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider block mb-1">02 . Console</span>
                       <h3 className="text-sm font-bold text-slate-800 dark:text-white tracking-wide">System Stream Logs</h3>
                     </div>
-                    <div className="flex items-center gap-2 px-2.5 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded-full">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span>
-                      <span className="text-[8px] font-bold text-emerald-450 uppercase tracking-widest">Streaming</span>
+                    <div className="flex items-center gap-2 px-2.5 py-1 bg-black/5 dark:bg-white/10 border border-black/10 dark:border-white/20 rounded-full">
+                      <span className="w-1.5 h-1.5 rounded-full bg-black dark:bg-white animate-ping"></span>
+                      <span className="text-[8px] font-bold text-black dark:text-white uppercase tracking-widest">Streaming</span>
                     </div>
                   </div>
                 </div>
@@ -930,7 +907,7 @@ function App() {
                 <div className="flex-grow bg-slate-950 dark:bg-slate-950/80 border border-slate-300 dark:border-slate-900/60 p-4 font-mono text-[9.5px] rounded-2xl overflow-y-auto space-y-2 leading-relaxed h-[220px] scrollbar-thin scanner-glow">
                   {logs.map((log, i) => (
                     <div key={i} className="text-slate-400 break-all border-b border-white/[0.01] pb-1.5">
-                      <span className="text-slate-500 dark:text-indigo-400/80 mr-2">[{new Date().toLocaleTimeString()}]</span>
+                      <span className="text-slate-500 dark:text-slate-400 mr-2">[{new Date().toLocaleTimeString()}]</span>
                       {log}
                     </div>
                   ))}
@@ -960,10 +937,10 @@ function App() {
                   { label: 'Crawled Jobs', val: analytics.totalJobs, color: 'text-slate-700 dark:text-slate-300' },
                   { label: 'Match \u2265 80%', val: analytics.matchedCount, color: 'text-neutral-900 dark:text-white' },
                   { label: 'Saved Hunt', val: analytics.savedCount, color: 'text-slate-700 dark:text-slate-300' },
-                  { label: 'Applied', val: analytics.appliedCount, color: 'text-emerald-600 dark:text-emerald-400' },
-                  { label: 'Interviews', val: analytics.interviewCount, color: 'text-pink-600 dark:text-pink-400' }
+                  { label: 'Applied', val: analytics.appliedCount, color: 'text-neutral-700 dark:text-neutral-300' },
+                  { label: 'Interviews', val: analytics.interviewCount, color: 'text-neutral-900 dark:text-white' }
                 ].map((item, index) => (
-                  <div key={index} className="p-4 bg-slate-100/50 dark:bg-slate-900/25 border border-slate-200 dark:border-slate-900 rounded-2xl text-center shadow-[inset_0_0_12px_rgba(255,255,255,0.01)] hover:border-slate-350 dark:hover:border-slate-800/80 transition-all duration-300">
+                  <div key={index} className="p-4 bg-slate-100/50 dark:bg-slate-900/25 border border-slate-200 dark:border-slate-900 rounded-2xl text-center shadow-[inset_0_0_12px_rgba(255,255,255,0.01)] hover:border-slate-300 dark:hover:border-slate-800/80 transition-all duration-300">
                     <span className="text-[8px] font-bold text-slate-500 uppercase tracking-widest block mb-1">
                       {item.label}
                     </span>
@@ -1030,7 +1007,7 @@ function App() {
                     <div className="space-y-2">
                       <div className="flex justify-between items-center mb-1">
                         <label className="text-[9px] font-bold text-slate-400 uppercase tracking-widest pl-0.5">Min Match Score</label>
-                        <span className="font-mono text-slate-800 dark:text-indigo-400 font-bold">{filterMinScore}%</span>
+                        <span className="font-mono text-black dark:text-white font-bold">{filterMinScore}%</span>
                       </div>
                       <input 
                         type="range" 
@@ -1061,27 +1038,27 @@ function App() {
                         {/* Job Details */}
                         <div className="space-y-4 flex-1 min-w-0 w-full">
                           <div className="flex flex-wrap gap-2 items-center">
-                            <span className="px-2.5 py-1 bg-slate-100 dark:bg-slate-900/60 border border-slate-250 dark:border-slate-800 text-slate-600 dark:text-slate-400 text-[9px] font-bold font-mono rounded-lg">
+                            <span className="px-2.5 py-1 bg-slate-100 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 text-[9px] font-bold font-mono rounded-lg">
                               {job.source}
                             </span>
                             {job.remote_status && (
-                              <span className="px-2.5 py-1 bg-slate-100 dark:bg-slate-900/60 border border-slate-250 dark:border-slate-800 text-slate-600 dark:text-slate-400 text-[9px] font-bold font-mono rounded-lg">
+                              <span className="px-2.5 py-1 bg-slate-100 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 text-[9px] font-bold font-mono rounded-lg">
                                 {job.remote_status}
                               </span>
                             )}
                             {job.experience && (
-                              <span className="px-2.5 py-1 bg-slate-100 dark:bg-slate-900/60 border border-slate-250 dark:border-slate-800 text-slate-600 dark:text-slate-400 text-[9px] font-bold font-mono rounded-lg">
+                              <span className="px-2.5 py-1 bg-slate-100 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 text-[9px] font-bold font-mono rounded-lg">
                                 {job.experience}
                               </span>
                             )}
                           </div>
                           
                           <div>
-                            <h4 className="text-base font-bold text-slate-850 dark:text-white tracking-wide truncate">{job.title}</h4>
+                            <h4 className="text-base font-bold text-slate-800 dark:text-white tracking-wide truncate">{job.title}</h4>
                             <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-0.5">{job.company} &bull; <span className="font-normal text-slate-400 normal-case">{job.location}</span></p>
                           </div>
                           
-                          <p className="text-xs text-slate-450 dark:text-slate-400 leading-relaxed font-light line-clamp-3">
+                          <p className="text-xs text-slate-400 dark:text-slate-400 leading-relaxed font-light line-clamp-3">
                             {job.summary || job.description}
                           </p>
 
@@ -1091,7 +1068,7 @@ function App() {
                               <div className="flex flex-wrap items-center gap-1.5">
                                 <span className="text-[8px] font-bold text-slate-500 uppercase tracking-wider mr-1.5">Matched:</span>
                                 {job.matchedSkills.map((s, idx) => (
-                                  <span key={idx} className="px-2 py-0.5 bg-slate-200 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-350 text-[9px] font-mono rounded-md">
+                                  <span key={idx} className="px-2 py-0.5 bg-slate-200 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-[9px] font-mono rounded-md">
                                     {s}
                                   </span>
                                 ))}
@@ -1101,7 +1078,7 @@ function App() {
                               <div className="flex flex-wrap items-center gap-1.5">
                                 <span className="text-[8px] font-bold text-slate-500 uppercase tracking-wider mr-1.5">Missing:</span>
                                 {job.missingSkills.map((s, idx) => (
-                                  <span key={idx} className="px-2 py-0.5 bg-red-100 dark:bg-red-955/15 border border-red-200 dark:border-red-900/20 text-red-650 dark:text-red-400 text-[9px] font-mono rounded-md">
+                                  <span key={idx} className="px-2 py-0.5 bg-slate-100 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 text-[9px] font-mono rounded-md border-dashed">
                                     {s}
                                   </span>
                                 ))}
@@ -1114,13 +1091,13 @@ function App() {
                         <div className="flex flex-row md:flex-col justify-between items-center md:items-end w-full md:w-auto border-t md:border-t-0 border-slate-200 dark:border-slate-900/60 pt-4 md:pt-0 gap-4 shrink-0">
                           <div className="text-right">
                             <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider block mb-0.5">Match score</span>
-                            <span className={`text-2xl font-black font-mono ${job.matchScore >= 80 ? 'text-emerald-500 dark:text-emerald-400' : 'text-slate-500 dark:text-slate-350'}`}>
+                            <span className={`text-2xl font-black font-mono ${job.matchScore >= 80 ? 'text-black dark:text-white' : 'text-slate-500 dark:text-slate-300'}`}>
                               {job.matchScore || 0}%
                             </span>
                           </div>
 
                           {job.recommendationReason && (
-                            <div className="hidden lg:block max-w-[200px] text-right text-[9px] text-slate-555 leading-snug font-light italic">
+                            <div className="hidden lg:block max-w-[200px] text-right text-[9px] text-slate-500 leading-snug font-light italic">
                               "{job.recommendationReason.slice(0, 75)}..."
                             </div>
                           )}
@@ -1138,14 +1115,14 @@ function App() {
                               </a>
                             ) : (
                               <div className="flex gap-2">
-                                <span className="px-3 py-2.5 bg-slate-100 dark:bg-slate-900/60 border border-slate-250 dark:border-slate-800 text-slate-600 dark:text-slate-400 text-[10px] font-bold uppercase tracking-wider rounded-xl flex items-center gap-1.5">
-                                  <Check size={11} className="text-emerald-600 dark:text-emerald-400" /> Applied
+                                <span className="px-3 py-2.5 bg-slate-100 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 text-[10px] font-bold uppercase tracking-wider rounded-xl flex items-center gap-1.5">
+                                  <Check size={11} className="text-black dark:text-white" /> Applied
                                 </span>
                                 <a 
                                   href={job.url} 
                                   target="_blank" 
                                   rel="noopener noreferrer" 
-                                  className="px-3 py-2.5 bg-slate-100 dark:bg-slate-900/60 hover:bg-slate-200 dark:hover:bg-slate-800 border border-slate-250 dark:border-slate-800 text-slate-700 dark:text-slate-300 text-[10px] font-bold uppercase tracking-wider text-center rounded-xl transition-all duration-300 cursor-pointer"
+                                  className="px-3 py-2.5 bg-slate-100 dark:bg-slate-900/60 hover:bg-slate-200 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 text-[10px] font-bold uppercase tracking-wider text-center rounded-xl transition-all duration-300 cursor-pointer"
                                 >
                                   Revisit
                                 </a>
@@ -1154,7 +1131,7 @@ function App() {
                             {job.status !== 'saved' && job.status !== 'applied' && (
                               <button 
                                 onClick={() => updateJobStatus(job.job_id, 'saved')}
-                                className="p-2.5 bg-slate-100 dark:bg-slate-900/60 hover:bg-slate-200 dark:hover:bg-slate-800 border border-slate-250 dark:border-slate-800 text-slate-500 dark:text-slate-400 hover:text-slate-850 dark:hover:text-white rounded-xl transition-all duration-300 cursor-pointer"
+                                className="p-2.5 bg-slate-100 dark:bg-slate-900/60 hover:bg-slate-200 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white rounded-xl transition-all duration-300 cursor-pointer"
                                 title="Bookmark Listing"
                               >
                                 <Bookmark size={12} />
@@ -1187,7 +1164,7 @@ function App() {
               </div>
             </div>
 
-            <p className="text-xs text-slate-550 dark:text-slate-500 leading-relaxed font-light max-w-2xl">
+            <p className="text-xs text-slate-500 dark:text-slate-500 leading-relaxed font-light max-w-2xl">
               Based on active search requirements across postings, your profile indicates specific technology gaps. 
               Adopt these tools to optimize your compatibility ratios.
             </p>
@@ -1196,27 +1173,27 @@ function App() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8">
                 {upskillPlan.map((plan, idx) => (
                   <div key={idx} className="carbon-panel p-7 space-y-6">
-                    <div className="flex justify-between items-start">
+                    <div className="flex flex-col space-y-3">
                       <h4 className="text-base font-bold text-slate-800 dark:text-white tracking-wide">{plan.skill}</h4>
-                      <div className="flex gap-2 text-[9px] uppercase font-bold tracking-wider font-mono">
-                        <span className="px-2 py-0.5 bg-slate-100 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 text-slate-650 dark:text-slate-400 rounded-md">{plan.learningTime}</span>
-                        <span className="px-2 py-0.5 bg-slate-200 dark:bg-slate-800 border border-slate-350 dark:border-slate-700 text-slate-800 dark:text-slate-200 rounded-md">{plan.roi}</span>
+                      <div className="flex flex-wrap gap-2 text-[9px] uppercase font-bold tracking-wider font-mono">
+                        <span className="px-2 py-1 bg-slate-100 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 rounded-md whitespace-nowrap">{plan.learningTime}</span>
+                        <span className="px-2 py-1 bg-slate-200 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-200 rounded-md leading-relaxed">{plan.roi}</span>
                       </div>
                     </div>
                     
                     <div className="space-y-4 text-xs leading-relaxed font-light">
                       <div>
                         <span className="text-[9px] text-slate-500 font-bold uppercase tracking-widest block mb-0.5">Recommended Course</span>
-                        <span className="text-slate-750 dark:text-slate-300">{plan.course}</span>
+                        <span className="text-slate-700 dark:text-slate-300">{plan.course}</span>
                       </div>
                       <div>
                         <span className="text-[9px] text-slate-500 font-bold uppercase tracking-widest block mb-0.5">Practical Portfolio Project</span>
-                        <span className="text-slate-750 dark:text-slate-300">{plan.project}</span>
+                        <span className="text-slate-700 dark:text-slate-300">{plan.project}</span>
                       </div>
                       {plan.certification && (
                         <div>
                           <span className="text-[9px] text-slate-500 font-bold uppercase tracking-widest block mb-0.5">Certification Goal</span>
-                          <span className="text-slate-750 dark:text-slate-300">{plan.certification}</span>
+                          <span className="text-slate-700 dark:text-slate-300">{plan.certification}</span>
                         </div>
                       )}
                     </div>
@@ -1224,7 +1201,7 @@ function App() {
                 ))}
               </div>
             ) : (
-              <div className="carbon-panel p-16 text-center text-slate-505 text-xs">
+              <div className="carbon-panel p-16 text-center text-slate-500 text-xs">
                 Upload your resume to formulate a personalized learning roadmap.
               </div>
             )}
@@ -1241,7 +1218,7 @@ function App() {
               </div>
             </div>
 
-            <p className="text-xs text-slate-550 dark:text-slate-500 leading-relaxed font-light max-w-2xl">
+            <p className="text-xs text-slate-500 dark:text-slate-500 leading-relaxed font-light max-w-2xl">
               AI-driven optimization critique matching your parsed profile structure against high-priority market demands.
             </p>
 
@@ -1251,7 +1228,7 @@ function App() {
                   <h4 className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">High Impact Keywords to Add</h4>
                   <div className="flex flex-wrap gap-2 pt-1">
                     {resumeSuggestions.missingKeywords?.map((kw, idx) => (
-                      <span key={idx} className="px-2.5 py-1 bg-emerald-500/10 border border-emerald-500/20 text-emerald-650 dark:text-emerald-450 font-semibold font-mono rounded-lg">
+                      <span key={idx} className="px-2.5 py-1 bg-black/5 dark:bg-white/10 border border-black/10 dark:border-white/20 text-black dark:text-white font-semibold font-mono rounded-lg">
                         + {kw}
                       </span>
                     ))}
@@ -1260,23 +1237,23 @@ function App() {
                 
                 <div className="carbon-panel p-7 space-y-3">
                   <h4 className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Formatting & Parsing Improvements</h4>
-                  <p className="text-slate-750 dark:text-slate-300 leading-relaxed text-sm">{resumeSuggestions.atsImprovements}</p>
+                  <p className="text-slate-700 dark:text-slate-300 leading-relaxed text-sm">{resumeSuggestions.atsImprovements}</p>
                 </div>
                 
                 <div className="carbon-panel p-7 space-y-3">
                   <h4 className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Recommended Project Enhancements</h4>
-                  <p className="text-slate-750 dark:text-slate-300 leading-relaxed text-sm">{resumeSuggestions.projectImprovements}</p>
+                  <p className="text-slate-700 dark:text-slate-300 leading-relaxed text-sm">{resumeSuggestions.projectImprovements}</p>
                 </div>
                 
                 {resumeSuggestions.grammarFixes && (
                   <div className="carbon-panel p-7 space-y-3">
                     <h4 className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Action Verbs & Impact Metrics</h4>
-                    <p className="text-slate-750 dark:text-slate-300 leading-relaxed text-sm">{resumeSuggestions.grammarFixes}</p>
+                    <p className="text-slate-700 dark:text-slate-300 leading-relaxed text-sm">{resumeSuggestions.grammarFixes}</p>
                   </div>
                 )}
               </div>
             ) : (
-              <div className="carbon-panel p-16 text-center text-slate-505 text-xs">
+              <div className="carbon-panel p-16 text-center text-slate-500 text-xs">
                 Upload your resume to analyze keyword gaps and ATS layout feedback.
               </div>
             )}
@@ -1298,12 +1275,12 @@ function App() {
                 {/* Left side details */}
                 <div className="md:col-span-4 carbon-panel p-7 space-y-6">
                   <div className="text-center space-y-3">
-                    <div className="w-16 h-16 bg-gradient-to-tr from-neutral-800 to-neutral-600 dark:from-neutral-200 dark:to-neutral-400 text-white dark:text-slate-955 flex items-center justify-center text-xl font-black mx-auto rounded-2xl shadow-md uppercase">
+                    <div className="w-16 h-16 bg-gradient-to-tr from-neutral-800 to-neutral-600 dark:from-neutral-200 dark:to-neutral-400 text-white dark:text-slate-950 flex items-center justify-center text-xl font-black mx-auto rounded-2xl shadow-md uppercase">
                       {profile.name?.slice(0, 2)}
                     </div>
                     <div>
                       <h4 className="text-md font-bold text-slate-800 dark:text-white">{profile.name}</h4>
-                      <span className="text-[9px] text-slate-900 dark:text-indigo-400/80 font-bold uppercase tracking-widest block mt-1">{profile.current_role}</span>
+                      <span className="text-[9px] text-black dark:text-white font-bold uppercase tracking-widest block mt-1">{profile.current_role}</span>
                     </div>
                   </div>
 
@@ -1311,22 +1288,22 @@ function App() {
 
                   <div className="space-y-4">
                     <div className="flex items-center gap-2.5 text-slate-500 dark:text-slate-400">
-                      <Mail size={12} className="text-slate-500 dark:text-indigo-400/60" /> <span>{profile.email || "No email parsed"}</span>
+                      <Mail size={12} className="text-slate-500 dark:text-slate-300" /> <span>{profile.email || "No email parsed"}</span>
                     </div>
                     <div className="flex items-center gap-2.5 text-slate-500 dark:text-slate-400">
-                      <Phone size={12} className="text-slate-500 dark:text-indigo-400/60" /> <span>{profile.phone || "No phone parsed"}</span>
+                      <Phone size={12} className="text-slate-500 dark:text-slate-300" /> <span>{profile.phone || "No phone parsed"}</span>
                     </div>
                     <div className="flex items-center gap-2.5 text-slate-500 dark:text-slate-400">
-                      <MapPin size={12} className="text-slate-500 dark:text-indigo-400/60" /> <span>{profile.location}</span>
+                      <MapPin size={12} className="text-slate-500 dark:text-slate-300" /> <span>{profile.location}</span>
                     </div>
                     
                     <div className="thin-accent-line" />
                     
                     <div className="flex justify-between text-slate-500 dark:text-slate-400">
-                      <span>Experience YOE:</span> <span className="font-bold text-slate-850 dark:text-white font-mono">{profile.yoe} Years</span>
+                      <span>Experience YOE:</span> <span className="font-bold text-slate-800 dark:text-white font-mono">{profile.yoe} Years</span>
                     </div>
                     <div className="flex justify-between text-slate-500 dark:text-slate-400">
-                      <span>Work Visa status:</span> <span className="font-bold text-slate-850 dark:text-white text-right">{profile.work_authorization || "Not Specified"}</span>
+                      <span>Work Visa status:</span> <span className="font-bold text-slate-800 dark:text-white text-right">{profile.work_authorization || "Not Specified"}</span>
                     </div>
 
                     <button 
@@ -1344,7 +1321,7 @@ function App() {
                     <h4 className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Extracted Technology Stack</h4>
                     <div className="flex flex-wrap gap-2 pt-1">
                       {profile.skills?.map((s, idx) => (
-                        <span key={idx} className="px-2.5 py-1 bg-slate-200 dark:bg-slate-850 border border-slate-300 dark:border-slate-800 text-slate-750 dark:text-slate-300 font-mono text-[10px] rounded-lg">
+                        <span key={idx} className="px-2.5 py-1 bg-slate-200 dark:bg-slate-800 border border-slate-300 dark:border-slate-800 text-slate-700 dark:text-slate-300 font-mono text-[10px] rounded-lg">
                           {s}
                         </span>
                       ))}
@@ -1354,7 +1331,7 @@ function App() {
                   {profile.projects && profile.projects.length > 0 && (
                     <div className="space-y-3">
                       <h4 className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Key Project Summaries</h4>
-                      <ul className="list-disc pl-4 space-y-1.5 text-slate-650 dark:text-slate-400">
+                      <ul className="list-disc pl-4 space-y-1.5 text-slate-600 dark:text-slate-400">
                         {profile.projects.map((p, idx) => (
                           <li key={idx} className="font-light">{p}</li>
                         ))}
@@ -1367,7 +1344,7 @@ function App() {
                       <h4 className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Previous Roles</h4>
                       <div className="flex flex-wrap gap-2 pt-1">
                         {profile.previous_roles.map((r, idx) => (
-                          <span key={idx} className="px-2.5 py-1 bg-slate-100 dark:bg-slate-900/60 border border-slate-250 dark:border-slate-800 text-slate-750 dark:text-slate-450 text-[10px] rounded-lg">
+                          <span key={idx} className="px-2.5 py-1 bg-slate-100 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-400 text-[10px] rounded-lg">
                             {r}
                           </span>
                         ))}
@@ -1378,7 +1355,7 @@ function App() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2 border-t border-slate-200 dark:border-slate-900/60">
                     <div className="space-y-2">
                       <h4 className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Education Background</h4>
-                      <ul className="list-disc pl-4 space-y-1 text-slate-650 dark:text-slate-450">
+                      <ul className="list-disc pl-4 space-y-1 text-slate-600 dark:text-slate-400">
                         {profile.education?.map((e, idx) => (
                           <li key={idx}>{e}</li>
                         ))}
@@ -1386,9 +1363,9 @@ function App() {
                     </div>
                     <div className="space-y-2">
                       <h4 className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Candidate Target Settings</h4>
-                      <div className="space-y-1.5 text-slate-650 dark:text-slate-400 pt-0.5">
-                        <div>Preference commitment: <span className="text-slate-850 dark:text-white font-bold">{profile.internship_or_fulltime}</span></div>
-                        <div>Target mode: <span className="text-slate-850 dark:text-white font-bold">{profile.remote_preference}</span></div>
+                      <div className="space-y-1.5 text-slate-600 dark:text-slate-400 pt-0.5">
+                        <div>Preference commitment: <span className="text-slate-800 dark:text-white font-bold">{profile.internship_or_fulltime}</span></div>
+                        <div>Target mode: <span className="text-slate-800 dark:text-white font-bold">{profile.remote_preference}</span></div>
                       </div>
                     </div>
                   </div>
@@ -1396,7 +1373,7 @@ function App() {
               </div>
             ) : (
               <div className="carbon-panel p-16 text-center space-y-6">
-                <div className="text-slate-505 text-xs">
+                <div className="text-slate-500 text-xs">
                   Resume details empty. Upload your resume (PDF, TXT, MD) in the sidebar toolbar, or paste it below to trigger AI profiling.
                 </div>
                 <div className="max-w-2xl mx-auto space-y-4">
@@ -1481,7 +1458,7 @@ function App() {
             </button>
             
             <div className="space-y-1.5 text-center">
-              <span className="inline-block px-2.5 py-0.5 bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-[9px] font-bold tracking-widest text-slate-650 dark:text-slate-400 rounded-full uppercase">
+              <span className="inline-block px-2.5 py-0.5 bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-[9px] font-bold tracking-widest text-slate-600 dark:text-slate-400 rounded-full uppercase">
                 Payment Verification
               </span>
               <h3 className="text-xl font-bold tracking-tight">
@@ -1498,7 +1475,7 @@ function App() {
                 alt="UPI QR Code" 
                 className="w-44 h-44 rounded-xl border border-slate-200 dark:border-slate-800" 
               />
-              <span className="text-[11px] font-mono font-bold mt-3 text-slate-550 dark:text-slate-400">
+              <span className="text-[11px] font-mono font-bold mt-3 text-slate-500 dark:text-slate-400">
                 UPI ID: 8277098097@ibl
               </span>
             </div>
@@ -1511,7 +1488,7 @@ function App() {
                 type="text" 
                 maxLength={12}
                 placeholder="e.g. 627192837482 or TEST12345678" 
-                className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 rounded-xl outline-none focus:border-neutral-500 text-slate-850 dark:text-white text-xs font-mono"
+                className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 rounded-xl outline-none focus:border-neutral-500 text-slate-800 dark:text-white text-xs font-mono"
                 value={paymentUtr}
                 onChange={(e) => setPaymentUtr(e.target.value)}
               />
@@ -1529,7 +1506,7 @@ function App() {
                   setPendingFile(null);
                   setPendingPasteText('');
                 }}
-                className="px-5 py-3 border border-slate-200 dark:border-slate-800 text-slate-550 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white uppercase tracking-widest font-bold rounded-xl transition-all duration-300 cursor-pointer"
+                className="px-5 py-3 border border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white uppercase tracking-widest font-bold rounded-xl transition-all duration-300 cursor-pointer"
               >
                 Cancel
               </button>
