@@ -15,8 +15,13 @@ if (!userId) {
 // Attach to all outgoing axios requests automatically
 axios.defaults.headers.common['X-User-ID'] = userId;
 
-const API_BASE = 'http://localhost:8000/api';
-const WS_BASE = `ws://localhost:8000/api/ws/stream?user_id=${userId}`;
+const API_BASE = window.location.origin.includes('localhost:5173')
+  ? 'http://localhost:8000/api'
+  : `${window.location.origin}/api`;
+
+const WS_BASE = window.location.origin.includes('localhost:5173')
+  ? `ws://localhost:8000/api/ws/stream?user_id=${userId}`
+  : `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}/api/ws/stream?user_id=${userId}`;
 
 function App() {
   const [activeTab, setActiveTab] = useState('dashboard');

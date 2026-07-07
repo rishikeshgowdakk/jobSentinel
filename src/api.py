@@ -381,6 +381,32 @@ async def get_analytics(request: Request):
         "marketDemandScore": min(100, 60 + total_jobs) if total_jobs > 0 else 0
     }
 
+# Serve frontend built files
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
+
+frontend_dist_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "frontend", "dist")
+
+if os.path.exists(frontend_dist_path):
+    # Mount assets subfolder first (essential for built CSS/JS)
+    assets_path = os.path.join(frontend_dist_path, "assets")
+    if os.path.exists(assets_path):
+        app.mount("/assets", StaticFiles(directory=assets_path), name="assets")
+        
+    # Serve index.html for all other routes to support client-side routing (fallback)
+    @app.get("/{fallback_path:path}")
+    async def serve_frontend(fallback_path: str):
+        if fallback_path.startswith("api/"):
+            return {"detail": "Not Found"}
+            
+        file_path = os.path.join(frontend_dist_path, fallback_path)
+        if os.path.isfile(file_path):
+            return FileResponse(file_path)
+            
+        return FileResponse(os.path.join(frontend_dist_path, "index.html"))
+else:
+    logger.warning("frontend/dist directory not found. Frontend will not be served by backend API.")
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
